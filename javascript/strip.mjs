@@ -146,16 +146,20 @@ class Strip {
       return;
     }
 
+    const boundingRect = area.getBoundingRect();
+    const width = boundingRect.width;
+    const height = boundingRect.height;
+
     var dataURL = this.canvas.toDataURL({
       format: 'png', // or 'jpeg'
       quality: 0.8, // Adjust quality as needed,
       left: area.left,
       top: area.top,
-      width: area.width * area.scaleX,
-      height: area.height * area.scaleY,
+      width,
+      height,
     });
 
-    sendInpaint(dataURL, c.width, c.height);
+    sendInpaint(dataURL, Math.ceil(width), Math.ceil(height));
   }
 
   addInpaintRectangle() {
@@ -184,25 +188,4 @@ class Strip {
   }
 }
 
-onUiLoaded(function () {
-  const container = document.querySelector(
-    '#txt2img_results_panel .canvas_container'
-  );
-  const strip = new Strip(container);
-  let latestGenerated = null;
-  setInterval(() => {
-    let gallery = document.querySelector('#txt2img_gallery .preview img');
-    if (!gallery) {
-      return;
-    }
-    if (!gallery.src || latestGenerated === gallery.src) {
-      return;
-    }
-    latestGenerated = gallery.src;
-    const clone = new Image();
-    clone.src = gallery.src;
-    clone.style.display = 'none';
-    document.body.appendChild(clone);
-    strip.attachImage(clone);
-  }, 500);
-});
+export { Strip };
