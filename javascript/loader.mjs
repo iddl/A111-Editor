@@ -70,6 +70,7 @@ function checkForImageGeneration(canvas) {
 onUiLoaded(function () {
   const container = getContainer(currentTab);
   const canvas = new Strip(container);
+
   setInterval(() => {
     checkForImageGeneration(canvas);
     checkForTabChange();

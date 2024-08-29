@@ -53,6 +53,75 @@ class Strip {
     });
     this.canvas.preserveObjectStacking = true;
 
+    const storedCanvasData = localStorage.getItem('canvasData');
+    if (storedCanvasData) {
+      const canvasJson = JSON.parse(storedCanvasData);
+      this.canvas.loadFromJSON(canvasJson, () => {
+        this.canvas.renderAll();
+      });
+    } else {
+      this.addSampleFraming();
+    }
+
+    this.canvas.on('mouse:over', (e) => {
+      // if (!(e.target instanceof Group)) {
+      //   return;
+      // }
+      // console.log(e.target);
+      // e.target.set('backgroundColor', '#1f2937');
+      // this.canvas.renderAll();
+    });
+
+    this.canvas.on('mouse:out', (e) => {
+      // if (!(e.target instanceof Group)) {
+      //   return;
+      // }
+      // // e.target.set('backgroundColor', this.bg);
+      // // this.canvas.renderAll();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'm') {
+        this.inpaint();
+      }
+
+      if (e.key === 'Delete') {
+        this.deleteSelection();
+      }
+
+      if (!(e.shiftKey && e.key === 'E')) {
+        return;
+      }
+
+      let selected = this.canvas.getActiveObjects();
+      let image = selected.find((obj) => obj instanceof FabricImage);
+      let panel = selected.find((obj) => obj instanceof Rect);
+
+      if (!image || !panel) {
+        return;
+      }
+
+      let groupMatrix = panel.group.calcTransformMatrix();
+
+      image.clipPath = new Rect({
+        left: panel.left + groupMatrix[4],
+        top: panel.top + groupMatrix[5],
+        width: panel.width,
+        height: panel.height,
+        originX: 'left',
+        originY: 'top',
+        absolutePositioned: true,
+      });
+      this.canvas.renderAll();
+    });
+
+    setInterval(() => {
+      const canvasJson = this.canvas.toJSON();
+      localStorage.setItem('canvasData', JSON.stringify(canvasJson));
+    }, 30000);
+  }
+
+  addSampleFraming() {
     // top part
     this.canvas.add(
       makeRectangle({ left: 0, top: 0, width: this.canvas.width, height: 517 })
@@ -85,56 +154,15 @@ class Strip {
       selectable: true,
     });
     this.canvas.add(panel2);
+  }
 
-    this.addInpaintRectangle();
-
-    this.canvas.on('mouse:over', (e) => {
-      // if (!(e.target instanceof Group)) {
-      //   return;
-      // }
-      // console.log(e.target);
-      // e.target.set('backgroundColor', '#1f2937');
-      // this.canvas.renderAll();
+  deleteSelection() {
+    let selected = this.canvas.getActiveObjects();
+    selected.forEach((obj) => {
+      this.canvas.remove(obj);
     });
-
-    this.canvas.on('mouse:out', (e) => {
-      // if (!(e.target instanceof Group)) {
-      //   return;
-      // }
-      // // e.target.set('backgroundColor', this.bg);
-      // // this.canvas.renderAll();
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.key === 'm') {
-        this.inpaint();
-      }
-
-      if (!(e.shiftKey && e.key === 'E')) {
-        return;
-      }
-
-      let selected = this.canvas.getActiveObjects();
-      let image = selected.find((obj) => obj instanceof FabricImage);
-      let panel = selected.find((obj) => obj instanceof Rect);
-
-      if (!image || !panel) {
-        return;
-      }
-
-      let groupMatrix = panel.group.calcTransformMatrix();
-
-      image.clipPath = new Rect({
-        left: panel.left + groupMatrix[4],
-        top: panel.top + groupMatrix[5],
-        width: panel.width,
-        height: panel.height,
-        originX: 'left',
-        originY: 'top',
-        absolutePositioned: true,
-      });
-      this.canvas.renderAll();
-    });
+    this.canvas.discardActiveObject();
+    this.canvas.renderAll();
   }
 
   inpaint() {
@@ -143,8 +171,12 @@ class Strip {
       return obj instanceof Rect && obj.isInpaint;
     });
     if (!area) {
+      this.addInpaintRectangle();
       return;
     }
+
+    area.strokeWidth = 0;
+    this.canvas.renderAll();
 
     const boundingRect = area.getBoundingRect();
     const width = boundingRect.width;
@@ -160,6 +192,9 @@ class Strip {
     });
 
     sendInpaint(dataURL, Math.ceil(width), Math.ceil(height));
+
+    area.strokeWidth = 1;
+    this.canvas.renderAll();
   }
 
   addInpaintRectangle() {
@@ -169,7 +204,7 @@ class Strip {
       width: 50,
       height: 50,
       stroke: 'red',
-      strokeWidth: 2,
+      strokeWidth: 1,
       fill: '',
       originX: 'left',
       originY: 'top',
