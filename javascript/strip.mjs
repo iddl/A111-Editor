@@ -187,10 +187,7 @@ class Strip {
   }
 
   inpaint() {
-    let selected = this.canvas.getActiveObjects();
-    let area = selected.find((obj) => {
-      return obj instanceof Rect && obj.isInpaint;
-    });
+    let area = this.canvas.getActiveObject();
     if (!area) {
       this.addInpaintRectangle();
       return;
