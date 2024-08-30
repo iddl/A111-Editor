@@ -63,6 +63,27 @@ class Strip {
       this.addSampleFraming();
     }
 
+    this.canvas.on('dragover', (e) => {
+      // partial insanity here, figure out why fabricjs is not doing this (anymore ?)
+      e.e.preventDefault();
+    });
+
+    this.canvas.on('drop', (e) => {
+      e = e.e; // crazy but true, get the original event
+      console.log('drop event');
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          this.attachImage(img);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
     this.canvas.on('mouse:over', (e) => {
       // if (!(e.target instanceof Group)) {
       //   return;
