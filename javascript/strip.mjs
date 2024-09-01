@@ -9,7 +9,7 @@ import {
   util,
 } from './fabric.mjs'; // browser
 
-import { sendDimensions, sendInpaint } from './adapter.mjs';
+import { sendDimensions, sendInpaint, getMaskIfAvailable } from './adapter.mjs';
 
 function makeRectangle(dims = { left: 0, top: 0, height: 100, width: 200 }) {
   let r = new Rect({
@@ -30,13 +30,6 @@ function makeRectangle(dims = { left: 0, top: 0, height: 100, width: 200 }) {
     sendDimensions(r.width, r.height);
   });
 
-  // let clipPath = `M ${-dims.width / 2} ${-dims.height / 2} l ${
-  //   dims.width
-  // } 0 l 0 ${dims.height} l ${-dims.width} 0 Z`;
-  // g.clipPath = new Path(clipPath, {
-  //   originX: 'left',
-  //   originY: 'top',
-  // });
   return r;
 }
 
@@ -68,37 +61,24 @@ class Strip {
       e.e.preventDefault();
     });
 
-    this.canvas.on('drop', (e) => {
+    this.canvas.on('drop', async (e) => {
       e = e.e; // crazy but true, get the original event
-      console.log('drop event');
       e.preventDefault();
       const file = e.dataTransfer.files[0];
       const reader = new FileReader();
-      reader.onload = (event) => {
+      const mask = await getMaskIfAvailable(file);
+
+      reader.onload = async (event) => {
         const img = new Image();
         img.onload = () => {
-          this.attachImage(img);
+          this.attachImage(img, mask);
         };
         img.src = event.target.result;
       };
-      reader.readAsDataURL(file);
-    });
-
-    this.canvas.on('mouse:over', (e) => {
-      // if (!(e.target instanceof Group)) {
-      //   return;
-      // }
-      // console.log(e.target);
-      // e.target.set('backgroundColor', '#1f2937');
-      // this.canvas.renderAll();
-    });
-
-    this.canvas.on('mouse:out', (e) => {
-      // if (!(e.target instanceof Group)) {
-      //   return;
-      // }
-      // // e.target.set('backgroundColor', this.bg);
-      // // this.canvas.renderAll();
+      await new Promise((resolve) => {
+        reader.onloadend = resolve;
+        reader.readAsDataURL(file);
+      });
     });
 
     document.addEventListener('keydown', (e) => {
@@ -137,7 +117,7 @@ class Strip {
     });
 
     setInterval(() => {
-      const canvasJson = this.canvas.toJSON();
+      const canvasJson = this.canvas.toJSON(['inpaintMask']);
       localStorage.setItem('canvasData', JSON.stringify(canvasJson));
     }, 30000);
   }
@@ -188,7 +168,9 @@ class Strip {
 
   inpaint() {
     let area = this.canvas.getActiveObject();
+
     if (!area) {
+      // add a selection tool if not selecting anything specific yet
       this.addInpaintRectangle();
       return;
     }
@@ -209,7 +191,8 @@ class Strip {
       height,
     });
 
-    sendInpaint(dataURL, Math.ceil(width), Math.ceil(height));
+    const mask = area.inpaintMask || null;
+    sendInpaint(dataURL, Math.ceil(width), Math.ceil(height), mask);
 
     area.strokeWidth = 1;
     this.canvas.renderAll();
@@ -227,17 +210,16 @@ class Strip {
       originX: 'left',
       originY: 'top',
     });
-    r.isInpaint = true;
     this.canvas.add(r);
   }
 
-  attachImage(img) {
-    let coords = { top: 0, left: 0 };
+  attachImage(img, mask) {
+    let attributes = { top: 0, left: 0, inpaintMask: mask };
     const selected = this.canvas.getActiveObject();
     if (selected instanceof Rect) {
       coords = { top: selected.top, left: selected.left };
     }
-    this.canvas.add(new FabricImage(img, coords));
+    this.canvas.add(new FabricImage(img, attributes));
   }
 }
 
