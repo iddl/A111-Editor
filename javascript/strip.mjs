@@ -40,8 +40,8 @@ class Strip {
         `;
     this.bg = '#374151';
     this.canvas = new Canvas('c', {
-      width: 1024,
-      height: 1600,
+      width: 1600,
+      height: 2500,
       backgroundColor: this.bg,
     });
     this.canvas.preserveObjectStacking = true;
@@ -217,7 +217,7 @@ class Strip {
     let attributes = { top: 0, left: 0, inpaintMask: mask };
     const selected = this.canvas.getActiveObject();
     if (selected instanceof Rect) {
-      coords = { top: selected.top, left: selected.left };
+      attributes = { top: selected.top, left: selected.left };
     }
     this.canvas.add(new FabricImage(img, attributes));
   }

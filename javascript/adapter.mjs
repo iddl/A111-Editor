@@ -12,35 +12,18 @@ function sendDimensions(width, height, tabname = 'txt2img') {
 }
 
 async function sendInpaint(dataURL, width, height, mask = null) {
+  let inpaintContainer = null;
   if (mask) {
     // if mask is present, do inpaint upload
     switch_to_img2img_tab(4);
+    inpaintContainer = '#img_inpaint_base .svelte-116rqfv';
   } else {
     // else do manual inpaint
     switch_to_img2img_tab(2);
+    inpaintContainer = '#img2img_inpaint_tab .svelte-116rqfv';
   }
 
   sendDimensions(width, height, 'img2img');
-
-  // Convert the data URL to a Blob
-  // fetch(dataURL)
-  //   .then((res) => res.blob())
-  //   .then((blob) => {
-  //     // Create a DataTransfer object
-  //     const dataTransfer = new DataTransfer();
-  //     dataTransfer.items.add(
-  //       new File([blob], 'red_image.png', { type: 'image/png' })
-  //     );
-
-  //     // Dispatch a drop event on the target div
-  //     const dropEvent = new DragEvent('drop', {
-  //       bubbles: true,
-  //       dataTransfer: dataTransfer,
-  //     });
-  //     document
-  //       .querySelector('#img2img_inpaint_tab .svelte-116rqfv')
-  //       .dispatchEvent(dropEvent);
-  //   });
 
   const res = await fetch(dataURL);
   const blob = await res.blob();
@@ -57,10 +40,11 @@ async function sendInpaint(dataURL, width, height, mask = null) {
     bubbles: true,
     dataTransfer: dataTransfer,
   });
-  document
-    // .querySelector('#img2img_inpaint_tab .svelte-116rqfv') FIXME for normal inpaint
-    .querySelector('#img_inpaint_base .svelte-116rqfv')
-    .dispatchEvent(dropEvent);
+  document.querySelector(inpaintContainer).dispatchEvent(dropEvent);
+
+  if (!mask) {
+    return;
+  }
 
   // Convert the mask data URL to a Blob
   const maskBlob = await fetch(mask);
