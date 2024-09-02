@@ -1,0 +1,14 @@
+.canvas_container nav ul{
+    list-style-type: none;
+    color: #ECEDEF;
+    border-bottom: solid 1px #ECEDEF;
+}
+
+.canvas_container nav ul li{
+    margin-right: 10px;
+    transition: background-color 0.1s ease;
+}
+
+.canvas_container nav ul li:hover {
+    background-color: rgba(217,217,217,0.18);
+}

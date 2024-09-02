@@ -8,7 +8,7 @@ import {
   FabricImage,
   util,
 } from './fabric.mjs'; // browser
-
+import { Menu } from './menu.mjs';
 import { sendDimensions, sendInpaint, getMaskIfAvailable } from './adapter.mjs';
 
 function makeRectangle(dims = { left: 0, top: 0, height: 100, width: 200 }) {
@@ -36,6 +36,7 @@ function makeRectangle(dims = { left: 0, top: 0, height: 100, width: 200 }) {
 class Strip {
   constructor(container) {
     container.innerHTML = `
+            <nav></nav>
             <canvas id="c"> </canvas>
         `;
     this.bg = '#374151';
@@ -45,6 +46,8 @@ class Strip {
       backgroundColor: this.bg,
     });
     this.canvas.preserveObjectStacking = true;
+    this.menu = new Menu(container.querySelector('nav'));
+    this.menu.render('initial');
 
     const storedCanvasData = localStorage.getItem('canvasData');
     if (storedCanvasData) {
@@ -56,18 +59,22 @@ class Strip {
       this.addSampleFraming();
     }
 
-    this.canvas.on('dragover', (e) => {
+    this.canvas.on('dragover', (event) => {
       // partial insanity here, figure out why fabricjs is not doing this (anymore ?)
-      e.e.preventDefault();
+      event.e.preventDefault();
     });
 
-    this.canvas.on('drop', async (e) => {
-      e = e.e; // crazy but true, get the original event
+    this.canvas.on('drop', async (event) => {
+      e = event.e; // crazy but true, get the original event
       e.preventDefault();
       const file = e.dataTransfer.files[0];
-      const reader = new FileReader();
+      if (!file) {
+        return;
+      }
+
       const mask = await getMaskIfAvailable(file);
 
+      const reader = new FileReader();
       reader.onload = async (event) => {
         const img = new Image();
         img.onload = () => {
@@ -86,7 +93,7 @@ class Strip {
         this.inpaint();
       }
 
-      if (e.key === 'Delete') {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
         this.deleteSelection();
       }
 
