@@ -73,7 +73,7 @@ async function getMaskIfAvailable(file) {
   }
 
   const expandMask = document.querySelectorAll(
-    '#component-283 .thumbnails img'
+    '.expand_mask_container:not(.hide) .thumbnails img'
   );
   if (expandMask.length != 3) {
     console.log('Not finding results in Expand Mask section');
@@ -122,3 +122,4 @@ async function getMaskIfAvailable(file) {
 }
 
 export { sendDimensions, sendInpaint, getMaskIfAvailable };
+1096;
