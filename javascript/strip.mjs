@@ -47,7 +47,7 @@ class Strip {
     });
     this.canvas.preserveObjectStacking = true;
     this.menu = new Menu(container.querySelector('nav'));
-    this.menu.render('initial');
+    this.menu.render([], this.canvas);
 
     const storedCanvasData = localStorage.getItem('canvasData');
     if (storedCanvasData) {
@@ -64,8 +64,18 @@ class Strip {
       event.e.preventDefault();
     });
 
+    this.canvas.on('selection:created', () => {
+      this.handleSelection();
+    });
+    this.canvas.on('selection:updated', () => {
+      this.handleSelection();
+    });
+    this.canvas.on('selection:cleared', () => {
+      this.handleSelection();
+    });
+
     this.canvas.on('drop', async (event) => {
-      e = event.e; // crazy but true, get the original event
+      const e = event.e; // crazy but true, get the original event
       e.preventDefault();
       const file = e.dataTransfer.files[0];
       if (!file) {
@@ -127,6 +137,11 @@ class Strip {
       const canvasJson = this.canvas.toJSON(['inpaintMask']);
       localStorage.setItem('canvasData', JSON.stringify(canvasJson));
     }, 30000);
+  }
+
+  handleSelection() {
+    const selection = this.canvas.getActiveObjects();
+    this.menu.render(selection, this.canvas);
   }
 
   addSampleFraming() {
@@ -221,7 +236,13 @@ class Strip {
   }
 
   attachImage(img, mask) {
-    let attributes = { top: 0, left: 0, inpaintMask: mask };
+    let attributes = {
+      top: 0,
+      left: 0,
+      inpaintMask: mask,
+      strokeWidth: 2,
+      stroke: '#222',
+    };
     const selected = this.canvas.getActiveObject();
     if (selected instanceof Rect) {
       attributes = { top: selected.top, left: selected.left };
