@@ -46,8 +46,6 @@ class Strip {
       backgroundColor: this.bg,
     });
     this.canvas.preserveObjectStacking = true;
-    this.menu = new Menu(container.querySelector('nav'));
-    this.menu.render([], this.canvas);
 
     const storedCanvasData = localStorage.getItem('canvasData');
     if (storedCanvasData) {
@@ -59,6 +57,96 @@ class Strip {
       this.addSampleFraming();
     }
 
+    this.setupActionMenu(container.querySelector('nav'));
+    this.setupFileDrop();
+    this.setupHistory();
+
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'm') {
+        this.inpaint();
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        this.deleteSelection();
+      }
+
+      if (!(e.shiftKey && e.key === 'E')) {
+        return;
+      }
+
+      let selected = this.canvas.getActiveObjects();
+      let image = selected.find((obj) => obj instanceof FabricImage);
+      let panel = selected.find((obj) => obj instanceof Rect);
+
+      if (!image || !panel) {
+        return;
+      }
+
+      let groupMatrix = panel.group.calcTransformMatrix();
+
+      image.clipPath = new Rect({
+        left: panel.left + groupMatrix[4],
+        top: panel.top + groupMatrix[5],
+        width: panel.width,
+        height: panel.height,
+        originX: 'left',
+        originY: 'top',
+        absolutePositioned: true,
+      });
+      this.canvas.renderAll();
+    });
+
+    setInterval(() => {
+      localStorage.setItem('canvasData', JSON.stringify(this.canvas.toJSON()));
+    }, 30000);
+  }
+
+  /**
+   * History
+   * https://github.com/fabricjs/fabric.js/issues/10011#issuecomment-2257867194
+   */
+  setupHistory() {
+    this.history = [];
+    this.canvas.on('object:modified', () => {
+      this.updateHistory();
+    });
+    this.canvas.on('object:added', () => {
+      this.updateHistory();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'z') {
+        this.undo();
+      }
+    });
+  }
+
+  updateHistory() {
+    this.history.push(this.canvas.toObject());
+  }
+
+  clearCanvas() {
+    this.canvas.remove(...this.canvas.getObjects());
+  }
+
+  undo() {
+    const history = this.history;
+    if (history.length === 1) return;
+    this.clearCanvas();
+    history.pop();
+    this.canvas.off('object:added');
+    util.enlivenObjects(history[history.length - 1].objects).then((objs) => {
+      objs.forEach((obj) => this.canvas.add(obj));
+      this.canvas.on('object:added', () => {
+        this.updateHistory();
+      });
+    });
+  }
+
+  /**
+   * Image drops
+   */
+  setupFileDrop() {
     this.canvas.on('dragover', (event) => {
       // partial insanity here, figure out why fabricjs is not doing this (anymore ?)
       event.e.preventDefault();
@@ -97,46 +185,40 @@ class Strip {
         reader.readAsDataURL(file);
       });
     });
+  }
 
-    document.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.key === 'm') {
-        this.inpaint();
-      }
+  attachImage(img, mask) {
+    let attributes = {
+      top: 0,
+      left: 0,
+      inpaintMask: mask,
+      strokeWidth: 2,
+      stroke: '#222',
+    };
+    const selected = this.canvas.getActiveObject();
+    if (selected instanceof Rect) {
+      attributes = { top: selected.top, left: selected.left };
+    }
+    this.canvas.add(new FabricImage(img, attributes));
+  }
 
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        this.deleteSelection();
-      }
+  /**
+   * Action menu
+   */
 
-      if (!(e.shiftKey && e.key === 'E')) {
-        return;
-      }
+  setupActionMenu(container) {
+    this.menu = new Menu(container);
+    this.menu.render([], this.canvas);
 
-      let selected = this.canvas.getActiveObjects();
-      let image = selected.find((obj) => obj instanceof FabricImage);
-      let panel = selected.find((obj) => obj instanceof Rect);
-
-      if (!image || !panel) {
-        return;
-      }
-
-      let groupMatrix = panel.group.calcTransformMatrix();
-
-      image.clipPath = new Rect({
-        left: panel.left + groupMatrix[4],
-        top: panel.top + groupMatrix[5],
-        width: panel.width,
-        height: panel.height,
-        originX: 'left',
-        originY: 'top',
-        absolutePositioned: true,
-      });
-      this.canvas.renderAll();
+    this.canvas.on('selection:created', () => {
+      this.handleSelection();
     });
-
-    setInterval(() => {
-      const canvasJson = this.canvas.toJSON(['inpaintMask']);
-      localStorage.setItem('canvasData', JSON.stringify(canvasJson));
-    }, 30000);
+    this.canvas.on('selection:updated', () => {
+      this.handleSelection();
+    });
+    this.canvas.on('selection:cleared', () => {
+      this.handleSelection();
+    });
   }
 
   handleSelection() {
@@ -233,21 +315,6 @@ class Strip {
       originY: 'top',
     });
     this.canvas.add(r);
-  }
-
-  attachImage(img, mask) {
-    let attributes = {
-      top: 0,
-      left: 0,
-      inpaintMask: mask,
-      strokeWidth: 2,
-      stroke: '#222',
-    };
-    const selected = this.canvas.getActiveObject();
-    if (selected instanceof Rect) {
-      attributes = { top: selected.top, left: selected.left };
-    }
-    this.canvas.add(new FabricImage(img, attributes));
   }
 }
 
