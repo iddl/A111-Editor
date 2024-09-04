@@ -1,4 +1,5 @@
-import { FabricImage } from './fabric.mjs'; // browser
+import { FabricImage } from './fabric.mjs';
+import { sendTxt2Img } from './adapter.mjs';
 
 class Menu {
   constructor(container) {
@@ -13,7 +14,7 @@ class Menu {
     let actions = [];
     if (image.strokeWidth === 0) {
       actions.push({
-        name: 'Add border',
+        name: '(+) Border',
         handler: () => {
           image.strokeWidth = 3;
           image.stroke = '#333';
@@ -22,10 +23,19 @@ class Menu {
       });
     } else {
       actions.push({
-        name: 'Remove border',
+        name: '(-) Border',
         handler: () => {
           image.strokeWidth = 0;
           image.dirty = true;
+        },
+      });
+    }
+
+    if (image.src) {
+      actions.push({
+        name: '(+) Variants',
+        handler: () => {
+          sendTxt2Img(image.src);
         },
       });
     }
@@ -47,6 +57,8 @@ class Menu {
   }
 
   renderUnselected() {
+    // poor's man React/Svelte
+    this.container.innerHTML = '';
     return;
   }
 

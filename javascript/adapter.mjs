@@ -11,6 +11,28 @@ function sendDimensions(width, height, tabname = 'txt2img') {
   updateInput(hInput);
 }
 
+async function urlToDataTransfer(url) {
+  // Convert the mask data URL to a Blob
+  const data = await fetch(url);
+  const blob = await data.blob();
+
+  // Create a DataTransfer object for the mask
+  const dt = new DataTransfer();
+  dt.items.add(new File([blob], 'mask.png', { type: 'image/png' }));
+  return dt;
+}
+
+async function sendTxt2Img(dataURL) {
+  switch_to_txt2img();
+
+  const dataTransfer = await urlToDataTransfer(dataURL);
+  const dropTarget = gradioApp().querySelector(
+    '#txt2img_prompt_image input[type="file"]'
+  );
+  dropTarget.files = dataTransfer.files;
+  dropTarget.dispatchEvent(new Event('change'));
+}
+
 async function sendInpaint(dataURL, width, height, mask = null) {
   let inpaintContainer = null;
   if (mask) {
@@ -22,20 +44,10 @@ async function sendInpaint(dataURL, width, height, mask = null) {
     switch_to_img2img_tab(2);
     inpaintContainer = '#img2img_inpaint_tab .svelte-116rqfv';
   }
-
   sendDimensions(width, height, 'img2img');
 
-  const res = await fetch(dataURL);
-  const blob = await res.blob();
-
-  // Create a DataTransfer object
-  const dataTransfer = new DataTransfer();
-  dataTransfer.items.add(
-    new File([blob], 'red_image.png', { type: 'image/png' })
-  );
-
   // Dispatch a drop event on the target div
-
+  const dataTransfer = await urlToDataTransfer(dataURL);
   const dropEvent = new DragEvent('drop', {
     bubbles: true,
     dataTransfer: dataTransfer,
@@ -121,5 +133,4 @@ async function getMaskIfAvailable(file) {
   });
 }
 
-export { sendDimensions, sendInpaint, getMaskIfAvailable };
-1096;
+export { sendDimensions, sendInpaint, getMaskIfAvailable, sendTxt2Img };
