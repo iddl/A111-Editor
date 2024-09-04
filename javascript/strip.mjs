@@ -35,10 +35,12 @@ function makeRectangle(dims = { left: 0, top: 0, height: 100, width: 200 }) {
 
 class Strip {
   constructor(container) {
+    container.setAttribute('tabindex', '0');
     container.innerHTML = `
             <nav></nav>
             <canvas id="c"> </canvas>
         `;
+    this.container = container;
     this.bg = '#374151';
     this.canvas = new Canvas('c', {
       width: 1600,
@@ -60,21 +62,55 @@ class Strip {
     this.setupActionMenu(container.querySelector('nav'));
     this.setupFileDrop();
     this.setupHistory();
+    this.setupKeyEvents();
+
+    setInterval(() => {
+      localStorage.setItem('canvasData', JSON.stringify(this.canvas.toJSON()));
+    }, 30000);
+  }
+
+  setupKeyEvents() {
+    this.isCanvasFocused = true;
+
+    this.container.addEventListener('focus', () => {
+      this.isCanvasFocused = true;
+    });
+
+    this.container.addEventListener('blur', () => {
+      this.isCanvasFocused = false;
+    });
 
     document.addEventListener('keydown', (e) => {
+      if (!this.isCanvasFocused) {
+        return;
+      }
+
       if (e.ctrlKey && e.key === 'm') {
         this.inpaint();
+        return;
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         this.deleteSelection();
+        return;
+      }
+
+      let selected = this.canvas.getActiveObjects();
+
+      if (e.key === 'c') {
+        const clipper = selected.find((obj) => {
+          return obj instanceof Rect && obj.isclipper;
+        });
+        if (clipper) {
+          this.executeCrop(clipper);
+        }
+        return;
       }
 
       if (!(e.shiftKey && e.key === 'E')) {
         return;
       }
 
-      let selected = this.canvas.getActiveObjects();
       let image = selected.find((obj) => obj instanceof FabricImage);
       let panel = selected.find((obj) => obj instanceof Rect);
 
@@ -95,10 +131,6 @@ class Strip {
       });
       this.canvas.renderAll();
     });
-
-    setInterval(() => {
-      localStorage.setItem('canvasData', JSON.stringify(this.canvas.toJSON()));
-    }, 30000);
   }
 
   /**
@@ -208,7 +240,7 @@ class Strip {
 
   setupActionMenu(container) {
     this.menu = new Menu(container);
-    this.menu.render([], this.canvas);
+    this.menu.render([], this);
 
     this.canvas.on('selection:created', () => {
       this.handleSelection();
@@ -223,7 +255,7 @@ class Strip {
 
   handleSelection() {
     const selection = this.canvas.getActiveObjects();
-    this.menu.render(selection, this.canvas);
+    this.menu.render(selection, this);
   }
 
   addSampleFraming() {
@@ -315,6 +347,50 @@ class Strip {
       originY: 'top',
     });
     this.canvas.add(r);
+  }
+
+  addClipper(image) {
+    let r = new Rect({
+      left: image.left,
+      top: image.top,
+      width: 50,
+      height: 50,
+      stroke: 'blue',
+      strokeWidth: 2,
+      fill: '',
+      originX: 'left',
+      originY: 'top',
+      // custom attributes for crop area
+      imageRef: image,
+      isclipper: true,
+    });
+    this.canvas.add(r);
+  }
+
+  executeCrop(clipper) {
+    const image = clipper.imageRef;
+    const imgMatrix = image.calcOwnMatrix();
+    const clipperMatrix = clipper.calcOwnMatrix();
+
+    const clipperBoundingRect = clipper.getBoundingRect();
+    const width = clipperBoundingRect.width;
+    const height = clipperBoundingRect.height;
+    const top = clipperMatrix[5] - imgMatrix[5];
+    const left = clipperMatrix[4] - imgMatrix[4];
+
+    image.set({
+      clipPath: new Rect({
+        width: width,
+        height: height,
+        top: top,
+        left: left,
+        originX: 'center',
+        originY: 'center',
+      }),
+    });
+
+    this.canvas.remove(clipper);
+    this.canvas.renderAll();
   }
 }
 

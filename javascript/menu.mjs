@@ -7,7 +7,7 @@ class Menu {
     this.container = container.querySelector('ul');
   }
 
-  renderForImage(image, canvas) {
+  renderForImage(image, parent) {
     // poor's man React/Svelte
     this.container.innerHTML = '';
 
@@ -31,6 +31,26 @@ class Menu {
       });
     }
 
+    if (image.clipPath) {
+      actions.push({
+        name: '(-) Crop',
+        handler: () => {
+          image.clipPath = null;
+          image.dirty = true;
+          parent.canvas.renderAll();
+          // re-render the menu, as the image might have changed
+          this.renderForImage(image, parent);
+        },
+      });
+    } else {
+      actions.push({
+        name: '(+) Crop',
+        handler: () => {
+          parent.addClipper(image);
+        },
+      });
+    }
+
     if (image.src) {
       actions.push({
         name: '(+) Variants',
@@ -47,9 +67,9 @@ class Menu {
       a.addEventListener('click', () => {
         action.handler();
         // update the canvas
-        canvas.renderAll();
+        parent.canvas.renderAll();
         // re-render the menu, as the image might have changed
-        this.renderForImage(image, canvas);
+        this.renderForImage(image, parent);
       });
       li.appendChild(a);
       this.container.appendChild(li);
@@ -62,14 +82,14 @@ class Menu {
     return;
   }
 
-  render(selection, canvas) {
+  render(selection, parent) {
     if (selection.length === 0) {
       this.renderUnselected();
       return;
     }
     if (selection.length === 1 && selection[0] instanceof FabricImage) {
       // we can only handle one image at a time now, no shapes, no other things
-      this.renderForImage(selection[0], canvas);
+      this.renderForImage(selection[0], parent);
       return;
     } else {
       // right now, we can't handle groups
