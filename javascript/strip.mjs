@@ -90,6 +90,26 @@ class Strip {
         return;
       }
 
+      if (e.ctrlKey && e.key === '[') {
+        let selected = this.canvas.getActiveObjects();
+        let image = selected.find((obj) => obj instanceof FabricImage);
+        if (image) {
+          // send object in the back of next upper intersecting object
+          this.canvas.sendObjectToBack(image, true);
+        }
+        return;
+      }
+
+      if (e.ctrlKey && e.key === ']') {
+        let selected = this.canvas.getActiveObjects();
+        let image = selected.find((obj) => obj instanceof FabricImage);
+        if (image) {
+          // send object in front of next upper intersecting object
+          this.canvas.bringObjectForward(image, true);
+        }
+        return;
+      }
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
         this.deleteSelection();
         return;
