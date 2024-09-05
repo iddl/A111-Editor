@@ -8,9 +8,6 @@ class Menu {
   }
 
   renderForImage(image, parent) {
-    // poor's man React/Svelte
-    this.container.innerHTML = '';
-
     let actions = [];
     if (image.strokeWidth === 0) {
       actions.push({
@@ -37,9 +34,6 @@ class Menu {
         handler: () => {
           image.clipPath = null;
           image.dirty = true;
-          parent.canvas.renderAll();
-          // re-render the menu, as the image might have changed
-          this.renderForImage(image, parent);
         },
       });
     } else {
@@ -60,6 +54,27 @@ class Menu {
       });
     }
 
+    this.renderActions(actions, parent);
+  }
+
+  renderUnselected(parent) {
+    let actions = [];
+    if (parent.canvas.getZoom() !== 1) {
+      actions.push({
+        name: '(-) Reset Zoom',
+        handler: () => {
+          parent.resetZoom();
+        },
+      });
+    }
+
+    this.renderActions(actions, parent);
+  }
+
+  renderActions(actions, parent) {
+    // poor's man React/Svelte
+    this.container.innerHTML = '';
+
     actions.forEach((action) => {
       const li = document.createElement('li');
       const a = document.createElement('a');
@@ -69,22 +84,17 @@ class Menu {
         // update the canvas
         parent.canvas.renderAll();
         // re-render the menu, as the image might have changed
-        this.renderForImage(image, parent);
+        this.render(parent);
       });
       li.appendChild(a);
       this.container.appendChild(li);
     });
   }
 
-  renderUnselected() {
-    // poor's man React/Svelte
-    this.container.innerHTML = '';
-    return;
-  }
-
-  render(selection, parent) {
+  render(parent) {
+    const selection = parent.canvas.getActiveObjects();
     if (selection.length === 0) {
-      this.renderUnselected();
+      this.renderUnselected(parent);
       return;
     }
     if (selection.length === 1 && selection[0] instanceof FabricImage) {

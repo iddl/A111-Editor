@@ -6,7 +6,6 @@ import {
   Line,
   Point,
   FabricImage,
-  util,
 } from './fabric.mjs'; // browser
 import { Menu } from './menu.mjs';
 import { sendDimensions, sendInpaint, getMaskIfAvailable } from './adapter.mjs';
@@ -63,6 +62,7 @@ class Strip {
     this.setupFileDrop();
     this.setupHistory();
     this.setupKeyEvents();
+    this.setupZoomPan();
 
     setInterval(() => {
       localStorage.setItem('canvasData', JSON.stringify(this.canvas.toJSON()));
@@ -71,6 +71,7 @@ class Strip {
 
   setupKeyEvents() {
     this.isCanvasFocused = true;
+    this.enablePan = false;
 
     this.container.addEventListener('focus', () => {
       this.isCanvasFocused = true;
@@ -78,6 +79,13 @@ class Strip {
 
     this.container.addEventListener('blur', () => {
       this.isCanvasFocused = false;
+    });
+
+    document.addEventListener('keyup', (e) => {
+      // Disable pan & zoom
+      if (!e.ctrlKey && !e.metaKey) {
+        this.enablePan = false;
+      }
     });
 
     document.addEventListener('keydown', (e) => {
@@ -90,6 +98,9 @@ class Strip {
         return;
       }
 
+      /**
+       * Change stacking order
+       */
       if (e.ctrlKey && e.key === '[') {
         let selected = this.canvas.getActiveObjects();
         let image = selected.find((obj) => obj instanceof FabricImage);
@@ -110,13 +121,35 @@ class Strip {
         return;
       }
 
+      /**
+       * Deleting objects
+       */
       if (e.key === 'Delete' || e.key === 'Backspace') {
         this.deleteSelection();
         return;
       }
 
+      /**
+       * History
+       */
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z') {
+          this.undo();
+        }
+      }
+
+      /**
+       * Zoom & pan
+       */
+      if (e.ctrlKey || e.metaKey) {
+        this.enablePan = true;
+      }
+
       let selected = this.canvas.getActiveObjects();
 
+      /**
+       * Crop actions
+       */
       if (e.key === 'c') {
         const clipper = selected.find((obj) => {
           return obj instanceof Rect && obj.isclipper;
@@ -151,6 +184,33 @@ class Strip {
       });
       this.canvas.renderAll();
     });
+  }
+
+  setupZoomPan() {
+    let timeoutId;
+
+    this.canvas.on('mouse:wheel', (opt) => {
+      if (!this.enablePan) {
+        return;
+      }
+      var delta = opt.e.deltaY;
+      var zoom = this.canvas.getZoom();
+      zoom *= 0.999 ** delta;
+      if (zoom > 20) zoom = 20;
+      if (zoom < 0.01) zoom = 0.01;
+      this.canvas.setZoom(zoom);
+      opt.e.preventDefault();
+      opt.e.stopPropagation();
+
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        this.menu.render(this);
+      }, 200);
+    });
+  }
+
+  resetZoom() {
+    this.canvas.setZoom(1);
   }
 
   /**
@@ -260,7 +320,7 @@ class Strip {
 
   setupActionMenu(container) {
     this.menu = new Menu(container);
-    this.menu.render([], this);
+    this.menu.render(this);
 
     this.canvas.on('selection:created', () => {
       this.handleSelection();
@@ -275,7 +335,7 @@ class Strip {
 
   handleSelection() {
     const selection = this.canvas.getActiveObjects();
-    this.menu.render(selection, this);
+    this.menu.render(this);
   }
 
   addSampleFraming() {
