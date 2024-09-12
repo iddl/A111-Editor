@@ -46,7 +46,7 @@ class Menu {
 
     if (image.src) {
       actions.push({
-        name: '(+) Variants',
+        name: '(+) Prompt to Txt2Img',
         handler: () => {
           sendTxt2Img(image.src);
         },
@@ -73,6 +73,13 @@ class Menu {
   renderActions(actions, parent) {
     // poor's man React/Svelte
     this.container.innerHTML = '';
+
+    if (actions.length === 0) {
+      actions.push({
+        name: 'No actions available',
+        handler: () => {},
+      });
+    }
 
     actions.forEach((action) => {
       const li = document.createElement('li');
@@ -102,7 +109,7 @@ class Menu {
       return;
     } else {
       // right now, we can't handle groups
-      this.renderUnselected();
+      this.renderUnselected(parent);
       return;
     }
   }

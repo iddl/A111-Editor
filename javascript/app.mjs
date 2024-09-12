@@ -1,14 +1,7 @@
-import {
-  Canvas,
-  Rect,
-  Path,
-  Group,
-  Line,
-  Point,
-  FabricImage,
-} from './lib-fabric.mjs'; // browser
+import { Canvas, Rect, util, FabricImage } from './lib-fabric.mjs'; // browser
 import { Menu } from './menu.mjs';
 import {
+  debounce,
   sendDimensions,
   sendInpaint,
   getMaskIfAvailable,
@@ -55,9 +48,14 @@ class Strip {
     const storedCanvasData = localStorage.getItem('canvasData');
     if (storedCanvasData) {
       const canvasJson = JSON.parse(storedCanvasData);
-      this.canvas.loadFromJSON(canvasJson, () => {
-        this.canvas.renderAll();
-      });
+      this.canvas.loadFromJSON(
+        canvasJson,
+        // it's still unclear why this needs to be debounced
+        // apparently this callback is called multiple times, unclear why (yet)
+        debounce(() => {
+          this.canvas.renderAll();
+        }, 10)
+      );
     } else {
       this.addSampleFraming();
     }
@@ -193,7 +191,9 @@ class Strip {
   setupZoomPan() {
     this.isDragging = false;
 
-    let timeoutId;
+    let debouncedMenuRender = debounce(() => {
+      this.menu.render(this);
+    }, 200);
 
     this.canvas.on('mouse:wheel', (opt) => {
       if (!this.enablePan) {
@@ -210,10 +210,7 @@ class Strip {
       e.preventDefault();
       e.stopPropagation();
 
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        this.menu.render(this);
-      }, 200);
+      debouncedMenuRender();
     });
 
     this.canvas.on('mouse:down', (opt) => {
@@ -429,8 +426,11 @@ class Strip {
       return;
     }
 
-    area.strokeWidth = 0;
-    this.canvas.renderAll();
+    // remove the borders of the selector tool before getting the image
+    if (!area.isInpaintSelector) {
+      area.strokeWidth = 0;
+      this.canvas.renderAll();
+    }
 
     const boundingRect = area.getBoundingRect();
     const width = boundingRect.width;
@@ -445,11 +445,18 @@ class Strip {
       height,
     });
 
-    const mask = area.inpaintMask || null;
-    sendInpaint(dataURL, Math.ceil(width), Math.ceil(height), mask);
+    sendInpaint({
+      dataURL,
+      width: Math.ceil(width),
+      height: Math.ceil(height),
+      mask: area.inpaintMask || null,
+    });
 
-    area.strokeWidth = 1;
-    this.canvas.renderAll();
+    // readjust the borders of the selector tool
+    if (!area.isInpaintSelector) {
+      area.strokeWidth = 1;
+      this.canvas.renderAll();
+    }
   }
 
   addInpaintRectangle() {
@@ -463,6 +470,7 @@ class Strip {
       fill: '',
       originX: 'left',
       originY: 'top',
+      isInpaintSelector: true,
     });
     this.canvas.add(r);
   }

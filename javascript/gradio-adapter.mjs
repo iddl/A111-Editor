@@ -33,7 +33,13 @@ async function sendTxt2Img(dataURL) {
   dropTarget.dispatchEvent(new Event('change'));
 }
 
-async function sendInpaint(dataURL, width, height, mask = null) {
+async function sendInpaint({
+  dataURL,
+  width,
+  height,
+  mask = null,
+  img2imgSettings = null,
+}) {
   let inpaintContainer = null;
   if (mask) {
     // if mask is present, do inpaint upload
@@ -133,4 +139,22 @@ async function getMaskIfAvailable(file) {
   });
 }
 
-export { sendDimensions, sendInpaint, getMaskIfAvailable, sendTxt2Img };
+function debounce(func, delay) {
+  let timeoutId;
+
+  return function (...args) {
+    clearTimeout(timeoutId);
+
+    timeoutId = setTimeout(() => {
+      func.apply(this, args);
+    }, delay);
+  };
+}
+
+export {
+  sendDimensions,
+  sendInpaint,
+  getMaskIfAvailable,
+  sendTxt2Img,
+  debounce,
+};
