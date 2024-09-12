@@ -6,9 +6,13 @@ import {
   Line,
   Point,
   FabricImage,
-} from './fabric.mjs'; // browser
+} from './lib-fabric.mjs'; // browser
 import { Menu } from './menu.mjs';
-import { sendDimensions, sendInpaint, getMaskIfAvailable } from './adapter.mjs';
+import {
+  sendDimensions,
+  sendInpaint,
+  getMaskIfAvailable,
+} from './gradio-adapter.mjs';
 
 function makeRectangle(dims = { left: 0, top: 0, height: 100, width: 200 }) {
   let r = new Rect({
@@ -187,30 +191,64 @@ class Strip {
   }
 
   setupZoomPan() {
+    this.isDragging = false;
+
     let timeoutId;
 
     this.canvas.on('mouse:wheel', (opt) => {
       if (!this.enablePan) {
         return;
       }
-      var delta = opt.e.deltaY;
-      var zoom = this.canvas.getZoom();
+      const e = opt.e;
+      const delta = e.deltaY;
+      let zoom = this.canvas.getZoom();
       zoom *= 0.999 ** delta;
       if (zoom > 20) zoom = 20;
       if (zoom < 0.01) zoom = 0.01;
-      this.canvas.setZoom(zoom);
-      opt.e.preventDefault();
-      opt.e.stopPropagation();
+      // this.canvas.setZoom(zoom);
+      this.canvas.zoomToPoint({ x: e.offsetX, y: e.offsetY }, zoom);
+      e.preventDefault();
+      e.stopPropagation();
 
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         this.menu.render(this);
       }, 200);
     });
+
+    this.canvas.on('mouse:down', (opt) => {
+      if (!this.enablePan) {
+        return;
+      }
+      const e = opt.e;
+      this.isDragging = true;
+      this.lastPosX = e.clientX;
+      this.lastPosY = e.clientY;
+    });
+
+    this.canvas.on('mouse:move', (opt) => {
+      if (!this.isDragging) {
+        return;
+      }
+      const e = opt.e;
+      let vpt = this.canvas.viewportTransform;
+      vpt[4] += e.clientX - this.lastPosX;
+      vpt[5] += e.clientY - this.lastPosY;
+      this.canvas.requestRenderAll();
+      this.lastPosX = e.clientX;
+      this.lastPosY = e.clientY;
+    });
+    this.canvas.on('mouse:up', (opt) => {
+      // on mouse up we want to recalculate new interaction
+      // for all objects, so we call setViewportTransform
+      // this.canvas.setViewportTransform(this.canvas.viewportTransform);
+      this.isDragging = false;
+    });
   }
 
   resetZoom() {
-    this.canvas.setZoom(1);
+    // resets panning as well
+    this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
   }
 
   /**

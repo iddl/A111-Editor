@@ -1,4 +1,4 @@
-import { Strip } from './strip.mjs'; // browser
+import { Strip } from './app.mjs'; // browser
 
 const containerSelectors = {
   txt2img: '#txt2img_results_panel .canvas_container',

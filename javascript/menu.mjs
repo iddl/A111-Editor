@@ -1,5 +1,5 @@
-import { FabricImage } from './fabric.mjs';
-import { sendTxt2Img } from './adapter.mjs';
+import { FabricImage } from './lib-fabric.mjs';
+import { sendTxt2Img } from './gradio-adapter.mjs';
 
 class Menu {
   constructor(container) {
@@ -27,7 +27,6 @@ class Menu {
         },
       });
     }
-
     if (image.clipPath) {
       actions.push({
         name: '(-) Crop',
