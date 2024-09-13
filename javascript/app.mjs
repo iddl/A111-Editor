@@ -91,6 +91,17 @@ class Strip {
     });
 
     document.addEventListener('keydown', (e) => {
+      /**
+       * Zoom & pan
+       * Most events are not executed if canvas is not focused, but this needs
+       * because users might click the meta key before coming back to the canvas
+       * and it has to have the appropriate behavior
+       */
+      if (e.ctrlKey || e.metaKey) {
+        this.enablePan = true;
+      }
+
+      // Now, if you're not focused, don't do anything else
       if (!this.isCanvasFocused) {
         return;
       }
@@ -138,13 +149,6 @@ class Strip {
         if (e.key === 'z') {
           this.undo();
         }
-      }
-
-      /**
-       * Zoom & pan
-       */
-      if (e.ctrlKey || e.metaKey) {
-        this.enablePan = true;
       }
 
       let selected = this.canvas.getActiveObjects();
