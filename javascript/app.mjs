@@ -17,14 +17,49 @@ class Strip {
       </div>
         `;
     this.container = container;
-    this.bg = '#374151';
+
     this.canvas = new Canvas('c', {
-      width: 1500,
-      height: 2500,
-      backgroundColor: this.bg,
+      width: 0,
+      height: 0,
+      backgroundColor: '#374151',
     });
+    this.canvas.zoomToPoint({ x: 0, y: 0 }, 0.5);
     this.canvas.preserveObjectStacking = true;
 
+    this.updateDimensions();
+    this.loadData();
+    this.setupActionMenu(container.querySelector('nav'));
+    this.setupFileDrop();
+    this.setupHistory();
+    this.setupKeyEvents();
+    this.setupZoomPan();
+
+    setInterval(() => {
+      this.updateDimensions();
+    }, 500);
+
+    setInterval(() => {
+      localStorage.setItem('canvasData', this.serialize());
+    }, 30000);
+  }
+
+  setContainer(container) {
+    this.container = container;
+    this.updateDimensions();
+  }
+
+  updateDimensions() {
+    const containerWidth = this.container.clientWidth;
+    if (this.canvas.width === containerWidth) {
+      return;
+    }
+    this.canvas.setDimensions({
+      width: containerWidth,
+      height: 1800,
+    });
+  }
+
+  loadData() {
     const storedCanvasData = localStorage.getItem('canvasData');
     if (storedCanvasData) {
       const canvasJson = JSON.parse(storedCanvasData);
@@ -39,20 +74,10 @@ class Strip {
     } else {
       this.addSampleFraming();
     }
-
-    this.setupActionMenu(container.querySelector('nav'));
-    this.setupFileDrop();
-    this.setupHistory();
-    this.setupKeyEvents();
-    this.setupZoomPan();
-
-    setInterval(() => {
-      localStorage.setItem('canvasData', this.serialize());
-    }, 30000);
   }
 
   serialize() {
-    return JSON.stringify(this.canvas.toJSON('selectable'));
+    return JSON.stringify(this.canvas.toJSON());
   }
 
   setupKeyEvents() {
@@ -377,20 +402,19 @@ class Strip {
 
   addSampleFraming() {
     // background container visible during pan
-    this.canvas.add(
-      new Rect({
-        left: -3,
-        top: -3,
-        width: this.canvas.width + 6,
-        height: this.canvas.height + 6,
-        stroke: '#222',
-        strokeWidth: 3,
-        fill: '',
-        evented: false,
-        selectable: false,
-        strokeDashArray: [9, 2],
-      })
-    );
+    // this.canvas.add(
+    //   new Rect({
+    //     left: -3,
+    //     top: -3,
+    //     width: 2000 + 6,
+    //     height: 4000 + 6,
+    //     stroke: '#222',
+    //     strokeWidth: 3,
+    //     fill: '',
+    //     evented: false,
+    //     selectable: false,
+    //   })
+    // );
   }
 
   deleteSelection() {

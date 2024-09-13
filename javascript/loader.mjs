@@ -20,7 +20,7 @@ function getTab() {
 }
 
 let currentTab = 'txt2img';
-function checkForTabChange() {
+function checkForTabChange(canvas) {
   const tab = getTab();
   if (!tab) {
     // we're in an unknown tab, hold on
@@ -36,7 +36,7 @@ function checkForTabChange() {
   while (currentContainer.firstChild) {
     newContainer.appendChild(currentContainer.firstChild);
   }
-
+  canvas.setContainer(newContainer);
   currentTab = tab;
 }
 
@@ -92,6 +92,6 @@ onUiLoaded(function () {
 
   setInterval(() => {
     checkForImageGeneration(canvas);
-    checkForTabChange();
+    checkForTabChange(canvas);
   }, 250);
 });
