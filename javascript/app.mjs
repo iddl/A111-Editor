@@ -7,28 +7,6 @@ import {
   getMaskIfAvailable,
 } from './gradio-adapter.mjs';
 
-function makeRectangle(dims = { left: 0, top: 0, height: 100, width: 200 }) {
-  let r = new Rect({
-    left: dims.left,
-    top: dims.top,
-    width: dims.width,
-    height: dims.height,
-    stroke: '#222',
-    strokeWidth: 2,
-    fill: '',
-    selectable: false,
-    lockMovementX: true,
-    lockMovementY: true,
-    originX: 'left',
-    originY: 'top',
-  });
-  r.on('mousedown', function (options) {
-    sendDimensions(r.width, r.height);
-  });
-
-  return r;
-}
-
 class Strip {
   constructor(container) {
     container.setAttribute('tabindex', '0');
@@ -41,7 +19,7 @@ class Strip {
     this.container = container;
     this.bg = '#374151';
     this.canvas = new Canvas('c', {
-      width: 1600,
+      width: 1500,
       height: 2500,
       backgroundColor: this.bg,
     });
@@ -69,8 +47,12 @@ class Strip {
     this.setupZoomPan();
 
     setInterval(() => {
-      localStorage.setItem('canvasData', JSON.stringify(this.canvas.toJSON()));
+      localStorage.setItem('canvasData', this.serialize());
     }, 30000);
+  }
+
+  serialize() {
+    return JSON.stringify(this.canvas.toJSON('selectable'));
   }
 
   setupKeyEvents() {
@@ -215,7 +197,6 @@ class Strip {
       zoom *= 0.999 ** delta;
       if (zoom > 20) zoom = 20;
       if (zoom < 0.01) zoom = 0.01;
-      // this.canvas.setZoom(zoom);
       this.canvas.zoomToPoint({ x: e.offsetX, y: e.offsetY }, zoom);
       e.preventDefault();
       e.stopPropagation();
@@ -395,38 +376,21 @@ class Strip {
   }
 
   addSampleFraming() {
-    // top part
+    // background container visible during pan
     this.canvas.add(
-      makeRectangle({ left: 0, top: 0, width: this.canvas.width, height: 517 })
-    );
-
-    // bottom part
-    this.canvas.add(
-      makeRectangle({
-        left: 0,
-        top: 517,
-        width: this.canvas.width,
-        height: this.canvas.height - 517,
+      new Rect({
+        left: -3,
+        top: -3,
+        width: this.canvas.width + 6,
+        height: this.canvas.height + 6,
+        stroke: '#222',
+        strokeWidth: 3,
+        fill: '',
+        evented: false,
+        selectable: false,
+        strokeDashArray: [9, 2],
       })
     );
-
-    var panel1 = makeRectangle({
-      left: 100,
-      top: 1000,
-      width: 300,
-      height: 200,
-      selectable: true,
-    });
-    this.canvas.add(panel1);
-
-    var panel2 = makeRectangle({
-      left: this.canvas.width - 400,
-      top: 1100,
-      width: 300,
-      height: 200,
-      selectable: true,
-    });
-    this.canvas.add(panel2);
   }
 
   deleteSelection() {
