@@ -44,27 +44,46 @@ let latestGenerated = null;
 function checkForImageGeneration(canvas) {
   let gallery = null;
   if (currentTab === 'txt2img') {
-    gallery = document.querySelector('#txt2img_gallery .preview img');
+    gallery = document.querySelector('#txt2img_gallery');
   } else if (currentTab === 'inpaint') {
-    gallery = document.querySelector('#img2img_gallery .preview img');
+    gallery = document.querySelector('#img2img_gallery');
   } else {
     return;
   }
 
-  if (!gallery || !gallery.src) {
+  let img = null;
+  let isLivePreview = false;
+  let livePreview = gallery.querySelector('.livePreview img');
+  if (livePreview) {
+    isLivePreview = true;
+    img = livePreview;
+  } else {
+    isLivePreview = false;
+    // don't misunderstand, this is called "preview" but it's the actual final image
+    // this is some odd naming from a1111
+    img = document.querySelector('.preview img');
+  }
+
+  if (!img || !img.src) {
     return;
   }
 
-  if (latestGenerated === gallery.src) {
+  if (latestGenerated === img.src) {
     return;
   }
 
-  latestGenerated = gallery.src;
+  latestGenerated = img.src;
+  // the canvas always reflects the image in the dom
+  // that's why we need to clone the current output into a new object
+  // this is basically a leak if we never clean up the clones, okay for now
   const clone = new Image();
-  clone.src = gallery.src;
+  clone.src = img.src;
   clone.style.display = 'none';
   document.body.appendChild(clone);
-  canvas.attachImage(clone);
+  canvas.attachImage({
+    img: clone,
+    isLivePreview,
+  });
 }
 
 onUiLoaded(function () {
@@ -74,5 +93,5 @@ onUiLoaded(function () {
   setInterval(() => {
     checkForImageGeneration(canvas);
     checkForTabChange();
-  }, 500);
+  }, 250);
 });

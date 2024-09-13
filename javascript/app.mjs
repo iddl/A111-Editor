@@ -333,7 +333,7 @@ class Strip {
       reader.onload = async (event) => {
         const img = new Image();
         img.onload = () => {
-          this.attachImage(img, mask);
+          this.attachImage({ img, mask });
         };
         img.src = event.target.result;
       };
@@ -344,19 +344,29 @@ class Strip {
     });
   }
 
-  attachImage(img, mask) {
+  attachImage({ img, mask = null, isLivePreview = false }) {
     let attributes = {
-      top: 0,
-      left: 0,
+      // pick the top left based on panning
+      top: -this.canvas.viewportTransform[5] / this.canvas.getZoom(),
+      left: -this.canvas.viewportTransform[4] / this.canvas.getZoom(),
       inpaintMask: mask,
       strokeWidth: 2,
       stroke: '#222',
+      isLivePreview,
     };
     const selected = this.canvas.getActiveObject();
     if (selected) {
       attributes.top = selected.top;
       attributes.left = selected.left;
     }
+
+    // clear up old previews
+    this.canvas.getObjects().forEach((obj) => {
+      if (obj.isLivePreview) {
+        this.canvas.remove(obj);
+      }
+    });
+
     this.canvas.add(new FabricImage(img, attributes));
   }
 
