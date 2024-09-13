@@ -353,8 +353,9 @@ class Strip {
       stroke: '#222',
     };
     const selected = this.canvas.getActiveObject();
-    if (selected instanceof Rect) {
-      attributes = { top: selected.top, left: selected.left };
+    if (selected) {
+      attributes.top = selected.top;
+      attributes.left = selected.left;
     }
     this.canvas.add(new FabricImage(img, attributes));
   }
@@ -437,7 +438,7 @@ class Strip {
     }
 
     // remove the borders of the selector tool before getting the image
-    if (!area.isInpaintSelector) {
+    if (area.isInpaintSelector) {
       area.strokeWidth = 0;
       this.canvas.renderAll();
     }
@@ -476,7 +477,7 @@ class Strip {
     });
 
     // readjust the borders of the selector tool
-    if (!area.isInpaintSelector) {
+    if (area.isInpaintSelector) {
       area.strokeWidth = 1;
       this.canvas.renderAll();
     }
