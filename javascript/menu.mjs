@@ -9,9 +9,44 @@ class Menu {
 
   renderForImage(image, parent) {
     let actions = [];
+
+    if (image.src) {
+      actions.push({
+        name: 'Inpaint',
+        handler: () => {
+          parent.inpaint();
+        },
+      });
+    }
+
+    if (image.src) {
+      actions.push({
+        name: 'Edit Prompt',
+        handler: () => {
+          sendTxt2Img(image.src);
+        },
+      });
+    }
+
+    if (image.clipPath) {
+      actions.push({
+        name: 'Uncrop',
+        handler: () => {
+          image.clipPath = null;
+          image.dirty = true;
+        },
+      });
+    } else {
+      actions.push({
+        name: 'Crop',
+        handler: () => {
+          parent.addClipper(image);
+        },
+      });
+    }
     if (image.strokeWidth === 0) {
       actions.push({
-        name: '(+) Border',
+        name: 'Add Border',
         handler: () => {
           image.strokeWidth = 3;
           image.stroke = '#333';
@@ -20,35 +55,10 @@ class Menu {
       });
     } else {
       actions.push({
-        name: '(-) Border',
+        name: 'Remove Border',
         handler: () => {
           image.strokeWidth = 0;
           image.dirty = true;
-        },
-      });
-    }
-    if (image.clipPath) {
-      actions.push({
-        name: '(-) Crop',
-        handler: () => {
-          image.clipPath = null;
-          image.dirty = true;
-        },
-      });
-    } else {
-      actions.push({
-        name: '(+) Crop',
-        handler: () => {
-          parent.addClipper(image);
-        },
-      });
-    }
-
-    if (image.src) {
-      actions.push({
-        name: '(+) Prompt to Txt2Img',
-        handler: () => {
-          sendTxt2Img(image.src);
         },
       });
     }
@@ -60,7 +70,7 @@ class Menu {
     let actions = [];
     if (parent.canvas.getZoom() !== 1) {
       actions.push({
-        name: '(-) Reset Zoom',
+        name: '(-) Reset Zoom/Pan',
         handler: () => {
           parent.resetZoom();
         },
