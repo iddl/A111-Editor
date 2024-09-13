@@ -1,4 +1,4 @@
-import { Canvas, Rect, util, FabricImage } from './lib-fabric.mjs'; // browser
+import { Canvas, Rect, Point, util, FabricImage } from './lib-fabric.mjs'; // browser
 import { Menu } from './menu.mjs';
 import {
   debounce,
@@ -33,8 +33,10 @@ class Strip {
   constructor(container) {
     container.setAttribute('tabindex', '0');
     container.innerHTML = `
+      <div class="focus_container">
             <nav></nav>
             <canvas id="c"> </canvas>
+      </div>
         `;
     this.container = container;
     this.bg = '#374151';
@@ -75,13 +77,17 @@ class Strip {
     this.isCanvasFocused = true;
     this.enablePan = false;
 
-    this.container.addEventListener('focus', () => {
-      this.isCanvasFocused = true;
-    });
+    this.container
+      .querySelector('.focus_container')
+      .addEventListener('focus', () => {
+        this.isCanvasFocused = true;
+      });
 
-    this.container.addEventListener('blur', () => {
-      this.isCanvasFocused = false;
-    });
+    this.container
+      .querySelector('.focus_container')
+      .addEventListener('blur', () => {
+        this.isCanvasFocused = false;
+      });
 
     document.addEventListener('keyup', (e) => {
       // Disable pan & zoom
@@ -436,17 +442,30 @@ class Strip {
       this.canvas.renderAll();
     }
 
-    const boundingRect = area.getBoundingRect();
+    let boundingRect = area.getBoundingRect();
+    const transformedPoint = new Point(
+      boundingRect.left,
+      boundingRect.top
+    ).transform(this.canvas.viewportTransform);
+    const transformedWidth = boundingRect.width * this.canvas.getZoom();
+    const transformedHeight = boundingRect.height * this.canvas.getZoom();
+    boundingRect = new Rect({
+      left: transformedPoint.x,
+      top: transformedPoint.y,
+      width: transformedWidth,
+      height: transformedHeight,
+    });
+
     const width = boundingRect.width;
     const height = boundingRect.height;
 
     var dataURL = this.canvas.toDataURL({
-      format: 'png', // or 'jpeg'
-      quality: 0.8, // Adjust quality as needed,
-      left: area.left,
-      top: area.top,
-      width,
-      height,
+      format: 'png',
+      quality: 1,
+      left: boundingRect.left,
+      top: boundingRect.top,
+      width: boundingRect.width,
+      height: boundingRect.height,
     });
 
     sendInpaint({
