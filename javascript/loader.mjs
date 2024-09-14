@@ -61,7 +61,7 @@ function checkForImageGeneration(canvas) {
     isLivePreview = false;
     // don't misunderstand, this is called "preview" but it's the actual final image
     // this is some odd naming from a1111
-    img = document.querySelector('.preview img');
+    img = gallery.querySelector('.preview img');
   }
 
   if (!img || !img.src) {

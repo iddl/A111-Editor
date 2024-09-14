@@ -119,6 +119,10 @@ class Strip {
         return;
       }
 
+      if (e.ctrlKey && e.key === 'z') {
+        this.undo();
+      }
+
       if (e.ctrlKey && e.key === 'm') {
         this.inpaint();
         return;
@@ -275,12 +279,6 @@ class Strip {
     });
     this.canvas.on('object:added', () => {
       this.updateHistory();
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.key === 'z') {
-        this.undo();
-      }
     });
   }
 
