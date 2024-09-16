@@ -101,22 +101,26 @@ class Strip {
       const storedCanvasData = objectStore.get('canvasData');
       storedCanvasData.onsuccess = (event) => {
         const canvasData = event.target.result;
-        if (canvasData) {
-          this.canvas.loadFromJSON(
-            canvasData,
-            debounce(() => {
-              this.canvas.renderAll();
-            }, 10)
-          );
-        } else {
-          this.addSampleFraming();
-        }
+        this.loadJSON(canvasData);
       };
     };
 
     request.onerror = (error) => {
       console.error('Error opening IndexedDB:', error);
     };
+  }
+
+  loadJSON(data) {
+    if (data) {
+      this.canvas.loadFromJSON(
+        data,
+        debounce(() => {
+          this.canvas.renderAll();
+        }, 10)
+      );
+    } else {
+      this.addSampleFraming();
+    }
   }
 
   serialize() {
@@ -381,8 +385,26 @@ class Strip {
         return;
       }
 
-      const mask = await getMaskIfAvailable(file);
+      // check if it's a project file
+      if (file.type === 'application/json') {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const json = event.target.result;
+          try {
+            const data = JSON.parse(json);
+            this.loadJSON(data);
+          } catch (error) {
+            console.error('Error parsing JSON file:', error);
+          }
+        };
+        await new Promise((resolve) => {
+          reader.onloadend = resolve;
+          reader.readAsText(file);
+        });
+        return;
+      }
 
+      const mask = await getMaskIfAvailable(file);
       const reader = new FileReader();
       reader.onload = async (event) => {
         const img = new Image();
@@ -422,6 +444,17 @@ class Strip {
     });
 
     this.canvas.add(new FabricImage(img, attributes));
+  }
+
+  downloadProject() {
+    const json = JSON.stringify(this.canvas.toJSON());
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const timestamp = new Date().toLocaleString().replace(/[/\\:*?"<>|]/g, '-');
+    link.download = `canvas_${timestamp}.json`;
+    link.click();
   }
 
   /**
