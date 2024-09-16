@@ -11,7 +11,8 @@ class Menu {
   renderForImage(image, parent) {
     let actions = [];
 
-    if (image.src) {
+    const src = image.getSrc();
+    if (src) {
       actions.push({
         name: 'Inpaint',
         handler: () => {
@@ -20,11 +21,11 @@ class Menu {
       });
     }
 
-    if (image.src) {
+    if (src) {
       actions.push({
         name: 'Edit Prompt',
         handler: () => {
-          sendTxt2Img(image.src);
+          sendTxt2Img(src);
         },
       });
     }
