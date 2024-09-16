@@ -27,7 +27,7 @@ class Strip {
     this.canvas.preserveObjectStacking = true;
 
     this.updateDimensions();
-    this.loadData();
+    this.loadSession();
     this.setupActionMenu(container.querySelector('nav'));
     this.setupFileDrop();
     this.setupHistory();
@@ -39,8 +39,35 @@ class Strip {
     }, 500);
 
     setInterval(() => {
-      localStorage.setItem('canvasData', this.serialize());
+      this.saveSession();
     }, 30000);
+  }
+
+  saveSession() {
+    const request = indexedDB.open('canvasDataDB', 1);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      db.createObjectStore('canvasData');
+    };
+
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const transaction = db.transaction('canvasData', 'readwrite');
+      const objectStore = transaction.objectStore('canvasData');
+      const canvasData = this.serialize();
+      const request = objectStore.put(canvasData, 'canvasData');
+      request.onsuccess = () => {
+        console.log('Canvas data saved to IndexedDB');
+      };
+      request.onerror = (error) => {
+        console.error('Error saving canvas data to IndexedDB:', error);
+      };
+    };
+
+    request.onerror = (error) => {
+      console.error('Error opening IndexedDB:', error);
+    };
   }
 
   setContainer(container) {
@@ -59,25 +86,41 @@ class Strip {
     });
   }
 
-  loadData() {
-    const storedCanvasData = localStorage.getItem('canvasData');
-    if (storedCanvasData) {
-      const canvasJson = JSON.parse(storedCanvasData);
-      this.canvas.loadFromJSON(
-        canvasJson,
-        // it's still unclear why this needs to be debounced
-        // apparently this callback is called multiple times, unclear why (yet)
-        debounce(() => {
-          this.canvas.renderAll();
-        }, 10)
-      );
-    } else {
-      this.addSampleFraming();
-    }
+  loadSession() {
+    const request = indexedDB.open('canvasDataDB', 1);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      db.createObjectStore('canvasData');
+    };
+
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const transaction = db.transaction('canvasData', 'readwrite');
+      const objectStore = transaction.objectStore('canvasData');
+      const storedCanvasData = objectStore.get('canvasData');
+      storedCanvasData.onsuccess = (event) => {
+        const canvasData = event.target.result;
+        if (canvasData) {
+          this.canvas.loadFromJSON(
+            canvasData,
+            debounce(() => {
+              this.canvas.renderAll();
+            }, 10)
+          );
+        } else {
+          this.addSampleFraming();
+        }
+      };
+    };
+
+    request.onerror = (error) => {
+      console.error('Error opening IndexedDB:', error);
+    };
   }
 
   serialize() {
-    return JSON.stringify(this.canvas.toJSON());
+    return this.canvas.toJSON();
   }
 
   setupKeyEvents() {
