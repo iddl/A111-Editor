@@ -119,8 +119,13 @@ class Strip {
         return;
       }
 
-      if (e.ctrlKey && e.key === 'z') {
-        this.undo();
+      /**
+       * History
+       */
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z') {
+          this.undo();
+        }
       }
 
       if (e.ctrlKey && e.key === 'm') {
@@ -157,15 +162,6 @@ class Strip {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         this.deleteSelection();
         return;
-      }
-
-      /**
-       * History
-       */
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'z') {
-          this.undo();
-        }
       }
 
       let selected = this.canvas.getActiveObjects();
