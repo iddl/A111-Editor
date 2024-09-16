@@ -128,6 +128,17 @@ class Strip {
         }
       }
 
+      /**
+       * Debugger for dev purposes
+       */
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'd') {
+          console.log(this.canvas);
+          debugger;
+          e.preventDefault();
+        }
+      }
+
       if (e.ctrlKey && e.key === 'm') {
         this.inpaint();
         return;
