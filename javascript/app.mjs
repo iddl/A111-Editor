@@ -23,7 +23,7 @@ class Strip {
       height: 0,
       backgroundColor: '#374151',
     });
-    this.canvas.zoomToPoint({ x: 0, y: 0 }, 0.5);
+    this.canvas.zoomToPoint({ x: 0, y: 0 }, 0.75);
     this.canvas.preserveObjectStacking = true;
 
     this.updateDimensions();
@@ -279,7 +279,7 @@ class Strip {
       let zoom = this.canvas.getZoom();
       zoom *= 0.999 ** delta;
       if (zoom > 20) zoom = 20;
-      if (zoom < 0.01) zoom = 0.01;
+      if (zoom < 0.25) zoom = 0.25;
       this.canvas.zoomToPoint({ x: e.offsetX, y: e.offsetY }, zoom);
       e.preventDefault();
       e.stopPropagation();

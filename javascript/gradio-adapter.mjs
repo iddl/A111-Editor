@@ -33,6 +33,16 @@ async function sendTxt2Img(dataURL) {
   dropTarget.dispatchEvent(new Event('change'));
 }
 
+async function sendToSAM(dataURL) {
+  switch_to_txt2img();
+  const dataTransfer = await urlToDataTransfer(dataURL);
+  const dropTarget = gradioApp().querySelector(
+    '#txt2img_sam_input_image input[type="file"]'
+  );
+  dropTarget.files = dataTransfer.files;
+  dropTarget.dispatchEvent(new Event('change'));
+}
+
 async function sendInpaint({
   dataURL,
   width,
@@ -156,5 +166,6 @@ export {
   sendInpaint,
   getMaskIfAvailable,
   sendTxt2Img,
+  sendToSAM,
   debounce,
 };
