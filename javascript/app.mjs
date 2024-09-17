@@ -130,6 +130,7 @@ class Strip {
   setupKeyEvents() {
     this.isCanvasFocused = true;
     this.enablePan = false;
+    this.clipboard = null;
 
     this.container
       .querySelector('.focus_container')
@@ -173,6 +174,31 @@ class Strip {
         if (e.key === 'z') {
           this.undo();
         }
+      }
+
+      /*
+       * Clipboard actions
+       */
+
+      if (e.ctrlKey && e.key === 'c') {
+        const selected = this.canvas.getActiveObjects();
+        const image = selected.find((obj) => obj instanceof FabricImage);
+        if (!image) {
+          return;
+        }
+        image.clone().then((cloned) => {
+          this.clipboard = cloned;
+        });
+      }
+
+      if (e.ctrlKey && e.key === 'v') {
+        const image = this.clipboard;
+        if (!(image instanceof FabricImage)) {
+          return;
+        }
+        image.top = -this.canvas.viewportTransform[5] / this.canvas.getZoom();
+        image.left = -this.canvas.viewportTransform[4] / this.canvas.getZoom();
+        this.canvas.add(image);
       }
 
       /**
