@@ -21,7 +21,7 @@ class Menu {
       actions.push({
         content: `${downloadIcon} Download image`,
         handler: (e) => {
-          console.log(e, 'Download image clicked');
+          app.downloadImage(selection);
         },
       });
     }

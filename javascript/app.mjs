@@ -457,6 +457,21 @@ class Strip {
     link.click();
   }
 
+  downloadImage(selection) {
+    if (!(selection instanceof FabricImage)) {
+      return;
+    }
+
+    const src = selection.getSrc();
+    const link = document.createElement('a');
+    link.href = src;
+    const timestamp = new Date().toLocaleString().replace(/[/\\:*?"<>|]/g, '-');
+    link.download = `image_${timestamp}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   /**
    * Action menu
    */
