@@ -7,11 +7,15 @@ const selectors = {
     canvas: '#txt2img_results_panel .canvas_container',
     prompt: '#txt2img_prompt_image input[type="file"]',
     gallery: '#txt2img_gallery',
+    width: '#txt2img_width input[type=number]',
+    height: '#txt2img_height input[type=number]',
   },
   inpaint: {
     canvas: '#img2img_results_panel .canvas_container',
     prompt: '#img2img_prompt_image input[type="file"]',
     gallery: '#img2img_gallery',
+    width: '#img2img_width input[type=number]',
+    height: '#img2img_height input[type=number]',
   },
 };
 
@@ -34,13 +38,9 @@ function getElement(name, tab = null) {
  * Actions
  */
 
-function sendDimensions(width, height, tabname = 'txt2img') {
-  var wInput = gradioApp().querySelector(
-    `#${tabname}_width input[type=number]`
-  );
-  var hInput = gradioApp().querySelector(
-    `#${tabname}_height input[type=number]`
-  );
+function setDimensionSliders(width, height, tab = null) {
+  let wInput = getElement('width', tab);
+  let hInput = getElement('height', tab);
   wInput.value = width;
   hInput.value = height;
   updateInput(wInput);
@@ -97,7 +97,7 @@ async function sendInpaint({
     switch_to_img2img_tab(2);
     inpaintContainer = '#img2img_inpaint_tab .svelte-116rqfv';
   }
-  sendDimensions(width, height, 'img2img');
+  setDimensionSliders(width, height, 'inpaint');
 
   // Dispatch a drop event on the target div
   const dataTransfer = await urlToDataTransfer(dataURL);
@@ -199,7 +199,6 @@ function debounce(func, delay) {
 }
 
 export {
-  sendDimensions,
   sendInpaint,
   getMaskIfAvailable,
   usePrompt as sendTxt2Img,

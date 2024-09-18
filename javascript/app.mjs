@@ -2,7 +2,6 @@ import { Canvas, Rect, Point, util, FabricImage } from './lib-fabric.mjs'; // br
 import { Menu } from './menu.mjs';
 import {
   debounce,
-  sendDimensions,
   sendInpaint,
   getMaskIfAvailable,
 } from './gradio-adapter.mjs';
@@ -587,12 +586,16 @@ class Strip {
       top: boundingRect.top,
       width: boundingRect.width,
       height: boundingRect.height,
+      // remember we're currently taking a picture of a potentially zoomed-out canvas
+      // so we need to scale it back to the original size
+      multiplier: 1 / this.canvas.getZoom(),
     });
 
     sendInpaint({
       dataURL,
-      width: Math.ceil(width),
-      height: Math.ceil(height),
+      // same comment about zoom as above
+      width: Math.ceil(width / this.canvas.getZoom()),
+      height: Math.ceil(height / this.canvas.getZoom()),
       mask: area.inpaintMask || null,
     });
 

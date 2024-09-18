@@ -24,7 +24,7 @@ function checkForTabChange(canvas) {
 
 let latestGenerated = null;
 function checkForImageGeneration(canvas) {
-  let gallery = getElement('gallery');
+  let gallery = getElement('gallery', currentTab);
   if (!gallery) {
     return;
   }
