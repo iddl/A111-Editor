@@ -58,7 +58,7 @@ class Menu {
 
     if (src) {
       actions.push({
-        name: 'Edit Prompt',
+        name: 'Use Prompt',
         handler: () => {
           sendTxt2Img(src);
         },

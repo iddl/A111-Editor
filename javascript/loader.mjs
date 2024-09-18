@@ -1,23 +1,5 @@
-import { Strip } from './app.mjs'; // browser
-
-const containerSelectors = {
-  txt2img: '#txt2img_results_panel .canvas_container',
-  inpaint: '#img2img_results_panel .canvas_container',
-};
-
-function getContainer(tab) {
-  return gradioApp().querySelector(containerSelectors[tab]);
-}
-
-function getTab() {
-  if (gradioApp().querySelector('#tab_txt2img:not([style*="display: none"])')) {
-    return 'txt2img';
-  }
-  if (gradioApp().querySelector('#tab_img2img:not([style*="display: none"])')) {
-    return 'inpaint';
-  }
-  return null;
-}
+import { Strip } from './app.mjs';
+import { getTab, getElement } from './gradio-adapter.mjs';
 
 let currentTab = 'txt2img';
 function checkForTabChange(canvas) {
@@ -31,8 +13,8 @@ function checkForTabChange(canvas) {
     return;
   }
 
-  const currentContainer = getContainer(currentTab);
-  const newContainer = getContainer(tab);
+  const currentContainer = getElement('canvas', currentTab);
+  const newContainer = getElement('canvas', tab);
   while (currentContainer.firstChild) {
     newContainer.appendChild(currentContainer.firstChild);
   }
@@ -42,12 +24,8 @@ function checkForTabChange(canvas) {
 
 let latestGenerated = null;
 function checkForImageGeneration(canvas) {
-  let gallery = null;
-  if (currentTab === 'txt2img') {
-    gallery = document.querySelector('#txt2img_gallery');
-  } else if (currentTab === 'inpaint') {
-    gallery = document.querySelector('#img2img_gallery');
-  } else {
+  let gallery = getElement('gallery');
+  if (!gallery) {
     return;
   }
 
@@ -87,7 +65,7 @@ function checkForImageGeneration(canvas) {
 }
 
 onUiLoaded(function () {
-  const container = getContainer(currentTab);
+  const container = getElement('canvas');
   const canvas = new Strip(container);
 
   setInterval(() => {

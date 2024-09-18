@@ -1,3 +1,39 @@
+/*
+ * Basic page utils
+ */
+
+const selectors = {
+  txt2img: {
+    canvas: '#txt2img_results_panel .canvas_container',
+    prompt: '#txt2img_prompt_image input[type="file"]',
+    gallery: '#txt2img_gallery',
+  },
+  inpaint: {
+    canvas: '#img2img_results_panel .canvas_container',
+    prompt: '#img2img_prompt_image input[type="file"]',
+    gallery: '#img2img_gallery',
+  },
+};
+
+function getTab() {
+  if (gradioApp().querySelector('#tab_txt2img:not([style*="display: none"])')) {
+    return 'txt2img';
+  }
+  if (gradioApp().querySelector('#tab_img2img:not([style*="display: none"])')) {
+    return 'inpaint';
+  }
+  return null;
+}
+
+function getElement(name, tab = null) {
+  tab = tab || getTab();
+  return gradioApp().querySelector(selectors[tab][name]);
+}
+
+/*
+ * Actions
+ */
+
 function sendDimensions(width, height, tabname = 'txt2img') {
   var wInput = gradioApp().querySelector(
     `#${tabname}_width input[type=number]`
@@ -22,13 +58,14 @@ async function urlToDataTransfer(url) {
   return dt;
 }
 
-async function sendTxt2Img(dataURL) {
-  switch_to_txt2img();
-
+async function usePrompt(dataURL) {
   const dataTransfer = await urlToDataTransfer(dataURL);
-  const dropTarget = gradioApp().querySelector(
-    '#txt2img_prompt_image input[type="file"]'
-  );
+  let dropTarget = getElement('prompt');
+
+  if (!dropTarget) {
+    return;
+  }
+
   dropTarget.files = dataTransfer.files;
   dropTarget.dispatchEvent(new Event('change'));
 }
@@ -165,7 +202,9 @@ export {
   sendDimensions,
   sendInpaint,
   getMaskIfAvailable,
-  sendTxt2Img,
+  usePrompt as sendTxt2Img,
   sendToSAM,
   debounce,
+  getTab,
+  getElement,
 };
