@@ -4,6 +4,7 @@
 
 const selectors = {
   txt2img: {
+    location: '#txt2img_results_panel',
     canvas: '#txt2img_results_panel .canvas_container',
     prompt: '#txt2img_prompt_image input[type="file"]',
     gallery: '#txt2img_gallery',
@@ -11,6 +12,7 @@ const selectors = {
     height: '#txt2img_height input[type=number]',
   },
   inpaint: {
+    location: '#img2img_results_panel',
     canvas: '#img2img_results_panel .canvas_container',
     prompt: '#img2img_prompt_image input[type="file"]',
     gallery: '#img2img_gallery',

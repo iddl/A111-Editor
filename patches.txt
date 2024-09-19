@@ -2,8 +2,3 @@ Just a small list of patches to the resident codebase
 
 - extensions/sd-webui-segment-anything/scripts/sam.py
 with gr.Column(visible=False, elem_classes="expand_mask_container") as dilation_column
-
-- modules/ui_common.py
-    with gr.Column(variant='panel', elem_id=f"{tabname}_results_panel"):
-        with gr.Group(elem_classes=f"canvas_container"):
-            pass

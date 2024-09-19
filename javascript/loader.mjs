@@ -65,6 +65,17 @@ function checkForImageGeneration(canvas) {
 }
 
 onUiLoaded(function () {
+  const txt2img = getElement('location', 'txt2img');
+  const inpaint = getElement('location', 'inpaint');
+  // add container to txt2img tab
+  let div = document.createElement('div');
+  div.classList.add('canvas_container');
+  txt2img.insertBefore(div, txt2img.firstChild);
+  // add container to img2img (inpaint) tab
+  div = document.createElement('div');
+  div.classList.add('canvas_container');
+  inpaint.insertBefore(div, inpaint.firstChild);
+
   const container = getElement('canvas');
   const canvas = new Strip(container);
 
