@@ -8,9 +8,8 @@ import {
 
 class Strip {
   constructor(container) {
-    container.setAttribute('tabindex', '0');
     container.innerHTML = `
-      <div class="focus_container">
+      <div class="focus_container" tabindex="0">
             <nav></nav>
             <canvas id="c"> </canvas>
       </div>
@@ -127,7 +126,7 @@ class Strip {
   }
 
   setupKeyEvents() {
-    this.isCanvasFocused = true;
+    this.isCanvasFocused = false;
     this.enablePan = false;
     this.clipboard = null;
 
