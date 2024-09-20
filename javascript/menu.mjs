@@ -47,14 +47,6 @@ class Menu {
     actions.push(this.renderFileMenu({ selection: image, app }));
 
     const src = image.getSrc();
-    if (src) {
-      actions.push({
-        name: 'Inpaint',
-        handler: () => {
-          app.inpaint();
-        },
-      });
-    }
 
     if (src) {
       actions.push({
@@ -64,6 +56,24 @@ class Menu {
         },
       });
     }
+
+    if (src) {
+      actions.push({
+        name: 'Inpaint',
+        handler: () => {
+          app.inpaint();
+        },
+      });
+    }
+
+    // if (src) {
+    //   actions.push({
+    //     name: 'Blend with background',
+    //     handler: () => {
+    //       app.inpaint({ detectEdges: true, alphaSrc: src });
+    //     },
+    //   });
+    // }
 
     if (src) {
       actions.push({

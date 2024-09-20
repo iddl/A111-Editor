@@ -10,11 +10,17 @@ from modules import script_callbacks
 
 
 def create_mask_outline(image):
-    # Convert the PIL image to grayscale
+    # # Convert the PIL image to grayscale
     img = image.convert("L")
 
-    # Apply thresholding to create a binary image (black and white)
-    _, thresh = cv2.threshold(np.array(img), 127, 255, cv2.THRESH_BINARY)
+    # Convert the PIL image to RGBA
+    img_rgba = image.convert("RGBA")
+
+    # Extract the alpha channel from the RGBA image
+    alpha_channel = img_rgba.split()[-1]
+
+    # Convert the alpha channel to a binary image (black and white)
+    _, thresh = cv2.threshold(np.array(alpha_channel), 0, 255, cv2.THRESH_BINARY)
 
     # Find contours (outlines) in the binary image
     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -33,8 +39,6 @@ class MaskResponse(BaseModel):
     rand: int = Field(title="Random integer")
 
 def get_mask(image: UploadFile):
-    # Access the uploaded image using req.file
-    print(image.filename)
 
     # Convert the uploaded image to a PIL Image
     pil_image = Image.open(image.file)

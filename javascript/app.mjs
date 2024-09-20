@@ -1,10 +1,6 @@
 import { Canvas, Rect, Point, util, FabricImage } from './lib-fabric.mjs'; // browser
 import { Menu } from './menu.mjs';
-import {
-  debounce,
-  sendInpaint,
-  getMaskIfAvailable,
-} from './gradio-adapter.mjs';
+import { debounce, sendInpaint } from './gradio-adapter.mjs';
 
 class Strip {
   constructor(container) {
@@ -428,12 +424,11 @@ class Strip {
         return;
       }
 
-      const mask = await getMaskIfAvailable(file);
       const reader = new FileReader();
       reader.onload = async (event) => {
         const img = new Image();
         img.onload = () => {
-          this.attachImage({ img, mask });
+          this.attachImage({ img });
         };
         img.src = event.target.result;
       };
@@ -444,12 +439,11 @@ class Strip {
     });
   }
 
-  attachImage({ img, mask = null, isLivePreview = false }) {
+  attachImage({ img, isLivePreview = false }) {
     let attributes = {
       // pick the top left based on panning
       top: -this.canvas.viewportTransform[5] / this.canvas.getZoom(),
       left: -this.canvas.viewportTransform[4] / this.canvas.getZoom(),
-      inpaintMask: mask,
       strokeWidth: 2,
       stroke: '#222',
       isLivePreview,
@@ -546,7 +540,7 @@ class Strip {
     this.canvas.renderAll();
   }
 
-  inpaint() {
+  async inpaint({ detectEdges = false, alphaSrc = null }) {
     let area = this.canvas.getActiveObject();
 
     if (!area) {
@@ -590,12 +584,17 @@ class Strip {
       multiplier: 1 / this.canvas.getZoom(),
     });
 
+    let mask = null;
+    if (detectEdges && alphaSrc) {
+      mask = await this.getEdgeMask(alphaSrc);
+    }
+
     sendInpaint({
       dataURL,
       // same comment about zoom as above
       width: Math.ceil(width / this.canvas.getZoom()),
       height: Math.ceil(height / this.canvas.getZoom()),
-      mask: area.inpaintMask || null,
+      mask,
     });
 
     // readjust the borders of the selector tool
@@ -603,6 +602,28 @@ class Strip {
       area.strokeWidth = 1;
       this.canvas.renderAll();
     }
+  }
+
+  async getEdgeMask(src) {
+    const res = await fetch(src);
+    let blob = await res.blob();
+
+    const formData = new FormData();
+    formData.append('image', blob, 'image.png');
+
+    // Make the upload request
+    const response = await fetch('/internal/mask', {
+      // Replace with your server's URL and endpoint
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch edge mask');
+    }
+
+    blob = await response.blob();
+    return blob;
   }
 
   addInpaintRectangle() {

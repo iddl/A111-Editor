@@ -113,14 +113,10 @@ async function sendInpaint({
     return;
   }
 
-  // Convert the mask data URL to a Blob
-  const maskBlob = await fetch(mask);
-  const maskData = await maskBlob.blob();
-
   // Create a DataTransfer object for the mask
   const maskDataTransfer = new DataTransfer();
   maskDataTransfer.items.add(
-    new File([maskData], 'mask.png', { type: 'image/png' })
+    new File([mask], 'mask.png', { type: 'image/png' })
   );
 
   // Dispatch a drop event with the mask data on the target div
@@ -131,61 +127,6 @@ async function sendInpaint({
   document
     .querySelector('#img_inpaint_mask .svelte-116rqfv')
     .dispatchEvent(maskDropEvent);
-}
-
-async function getMaskIfAvailable(file) {
-  // workaround to sense if the file is coming from segment anything
-  if (!file.name.startsWith('tmp')) {
-    return;
-  }
-
-  const expandMask = document.querySelectorAll(
-    '.expand_mask_container:not(.hide) .thumbnails img'
-  );
-  if (expandMask.length != 3) {
-    console.log('Not finding results in Expand Mask section');
-    return;
-  }
-
-  // the mask is actually in the second image
-  let mask = expandMask[1].src;
-  if (!mask) {
-    return;
-  }
-
-  // Fetch the image source and convert it to base64
-  const res = await fetch(mask);
-  let blob = await res.blob();
-
-  const formData = new FormData();
-  formData.append('image', blob, 'image.png'); // 'image' is the field name your server expects
-
-  // Make the upload request
-  const response = await fetch('/internal/mask', {
-    // Replace with your server's URL and endpoint
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch mask');
-  }
-
-  blob = await response.blob();
-  const reader = new FileReader();
-
-  return new Promise((resolve, reject) => {
-    reader.onloadend = () => {
-      if (reader.readyState === FileReader.DONE) {
-        const base64data = reader.result;
-        resolve(base64data);
-      } else {
-        reject(new Error('Failed to read mask'));
-      }
-    };
-
-    reader.readAsDataURL(blob);
-  });
 }
 
 function debounce(func, delay) {
@@ -202,7 +143,6 @@ function debounce(func, delay) {
 
 export {
   sendInpaint,
-  getMaskIfAvailable,
   usePrompt as sendTxt2Img,
   sendToSAM,
   debounce,
