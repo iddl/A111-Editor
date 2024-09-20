@@ -118,7 +118,7 @@ class Strip {
   }
 
   serialize() {
-    return this.canvas.toJSON();
+    return this.canvas.toObject(['hasTransparency']);
   }
 
   setupKeyEvents() {
@@ -440,13 +440,38 @@ class Strip {
   }
 
   attachImage({ img, isLivePreview = false }) {
+    // this is a neat attribute that is saved to show "Blend with background" options
+    let hasTransparency = false;
+    // don't bother assessing transparency if we're casting live previews
+    // avoids potential frame drops
+    if (!isLivePreview) {
+      // this is a routine to see if the image has transparency,
+      // meaning it can be blended with the background, and we should remember that
+      const tempCanvas = document.createElement('canvas');
+      const tempContext = tempCanvas.getContext('2d');
+      const imageWidth = img.width;
+      const imageHeight = img.height;
+      tempCanvas.width = imageWidth;
+      tempCanvas.height = imageHeight;
+      tempContext.clearRect(0, 0, imageWidth, imageHeight);
+      tempContext.drawImage(img, 0, 0, imageWidth, imageHeight);
+      const imageData = tempContext.getImageData(0, 0, imageWidth, imageHeight);
+      const alphaData = imageData.data.filter(
+        (_, index) => (index + 1) % 4 === 0
+      );
+      hasTransparency = alphaData.some((alpha) => alpha === 0);
+      tempCanvas.remove();
+    }
+
     let attributes = {
       // pick the top left based on panning
       top: -this.canvas.viewportTransform[5] / this.canvas.getZoom(),
       left: -this.canvas.viewportTransform[4] / this.canvas.getZoom(),
-      strokeWidth: 2,
+      // image with transparency should not have borders
+      strokeWidth: hasTransparency ? 0 : 2,
       stroke: '#222',
       isLivePreview,
+      hasTransparency,
     };
     const selected = this.canvas.getActiveObject();
     if (selected) {

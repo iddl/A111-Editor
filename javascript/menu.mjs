@@ -66,14 +66,14 @@ class Menu {
       });
     }
 
-    // if (src) {
-    //   actions.push({
-    //     name: 'Blend with background',
-    //     handler: () => {
-    //       app.inpaint({ detectEdges: true, alphaSrc: src });
-    //     },
-    //   });
-    // }
+    if (src && image.hasTransparency) {
+      actions.push({
+        name: 'Blend with background',
+        handler: () => {
+          app.inpaint({ detectEdges: true, alphaSrc: src });
+        },
+      });
+    }
 
     if (src) {
       actions.push({
