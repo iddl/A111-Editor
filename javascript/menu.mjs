@@ -61,7 +61,7 @@ class Menu {
       actions.push({
         name: 'Inpaint',
         handler: () => {
-          app.inpaint();
+          app.inpaint({ detectEdges: false });
         },
       });
     }

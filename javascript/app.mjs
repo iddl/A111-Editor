@@ -207,7 +207,7 @@ class Strip {
       }
 
       if (e.ctrlKey && e.key === 'm') {
-        this.inpaint();
+        this.inpaint({ detectEdges: false });
         return;
       }
 
