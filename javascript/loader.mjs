@@ -64,17 +64,28 @@ function checkForImageGeneration(canvas) {
   });
 }
 
-onUiLoaded(function () {
-  const txt2img = getElement('location', 'txt2img');
-  const inpaint = getElement('location', 'inpaint');
-  // add container to txt2img tab
+function setupCanvas(tabname) {
+  const tab = getElement('location', tabname);
+  // add container to txt2img or inpaint tab
   let div = document.createElement('div');
   div.classList.add('canvas_container');
-  txt2img.insertBefore(div, txt2img.firstChild);
-  // add container to img2img (inpaint) tab
-  div = document.createElement('div');
-  div.classList.add('canvas_container');
-  inpaint.insertBefore(div, inpaint.firstChild);
+  tab.insertBefore(div, tab.firstChild);
+  // sets the model setting column to take 30% of the width, so that the canvas takes 70% of it
+
+  // this resize probably doesn't work in img2img because it's not open yet, for now just skip it
+  if (tabname === 'inpaint') {
+    return;
+  }
+
+  let workspace = getElement('workspaceContainer', tabname);
+  workspace.style.gridTemplateColumns = `${
+    workspace.offsetWidth * 0.3
+  }px 16px 1fr`;
+}
+
+onUiLoaded(function () {
+  setupCanvas('txt2img');
+  setupCanvas('inpaint');
 
   const container = getElement('canvas');
   const canvas = new Strip(container);

@@ -10,6 +10,7 @@ const selectors = {
     gallery: '#txt2img_gallery',
     width: '#txt2img_width input[type=number]',
     height: '#txt2img_height input[type=number]',
+    workspaceContainer: '#txt2img_extra_tabs .resize-handle-row',
   },
   inpaint: {
     location: '#img2img_results_panel',
@@ -18,6 +19,7 @@ const selectors = {
     gallery: '#img2img_gallery',
     width: '#img2img_width input[type=number]',
     height: '#img2img_height input[type=number]',
+    workspaceContainer: '#img2img_extra_tabs .resize-handle-row',
   },
 };
 
