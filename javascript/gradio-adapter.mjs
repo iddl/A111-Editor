@@ -11,6 +11,7 @@ const selectors = {
     width: '#txt2img_width input[type=number]',
     height: '#txt2img_height input[type=number]',
     workspaceContainer: '#txt2img_extra_tabs .resize-handle-row',
+    generateButton: '#txt2img_generate',
   },
   inpaint: {
     location: '#img2img_results_panel',
@@ -20,6 +21,7 @@ const selectors = {
     width: '#img2img_width input[type=number]',
     height: '#img2img_height input[type=number]',
     workspaceContainer: '#img2img_extra_tabs .resize-handle-row',
+    generateButton: '#img2img_generate',
   },
 };
 
@@ -143,6 +145,12 @@ function debounce(func, delay) {
   };
 }
 
+function generateImage() {
+  const tab = getTab();
+  const generateButton = getElement('generateButton', tab);
+  generateButton.click();
+}
+
 export {
   sendInpaint,
   usePrompt as sendTxt2Img,
@@ -150,4 +158,5 @@ export {
   debounce,
   getTab,
   getElement,
+  generateImage,
 };

@@ -547,7 +547,7 @@ class Strip {
   addSampleFraming() {
     // Draw text on the canvas
     const text = new Text(
-      `Welcome to Ａ１１１ Ｅｄｉｔｏｒ.\nCreate your first image,\nit will be added to the canvas automatically.\nFeel free to move and resize it as you like.`,
+      `Welcome to Ａ１１１ Ｅｄｉｔｏｒ.\nClick "Generate" to add your first generation to the canvas.\nFeel free to move and resize it as you like.`,
       {
         left: 420,
         top: 50,
