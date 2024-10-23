@@ -32,7 +32,6 @@ async function init(app) {
       vmode: 0,
       customIO: { save: 'app.activeDocument.saveToOE("png")' },
       localsave: false,
-      autosave: 120,
       plugins: [],
     },
   };
@@ -96,28 +95,8 @@ async function editInPhotopea(fabricImage, app) {
 
   modal.style.display = 'block';
 
-  let src = fabricImage.getSrc();
-  // Load the image after initialization
-  // Don't pass urls, pass base64 data
-  function isBase64(str) {
-    try {
-      return btoa(atob(str)) == str;
-    } catch (err) {
-      return false;
-    }
-  }
-
-  if (!isBase64(src)) {
-    const response = await fetch(src);
-    const blob = await response.blob();
-    const reader = new FileReader();
-    src = await new Promise((resolve) => {
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  iframe.contentWindow.postMessage(`app.open("${src}", false, false);`, '*');
+  let src = fabricImage.toDataURL();
+  iframe.contentWindow.postMessage(`app.open("${src}", false, true);`, '*');
 }
 
 function closeModal() {
