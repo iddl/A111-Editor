@@ -405,12 +405,30 @@ class Strip {
     this.canvas.on('drop', async (event) => {
       const e = event.e; // crazy but true, get the original event
       e.preventDefault();
+
+      // Possibility #1. A URL, which happens when we drag images
+      // from the Segment Anything plugin, for example.
+      const items = e.dataTransfer.items;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === 'string' && items[i].type === 'text/uri-list') {
+          items[i].getAsString((url) => {
+            const img = new Image();
+            img.onload = () => {
+              this.attachImage({ img });
+            };
+            img.src = url;
+          });
+          return;
+        }
+      }
+
+      // Now we're left with files
       const file = e.dataTransfer.files[0];
       if (!file) {
         return;
       }
 
-      // check if it's a project file
+      // Possbility #2. A project file
       if (file.type === 'application/json') {
         const reader = new FileReader();
         reader.onload = async (event) => {
@@ -429,6 +447,7 @@ class Strip {
         return;
       }
 
+      // Possbility #3. An image file
       const reader = new FileReader();
       reader.onload = async (event) => {
         const img = new Image();
