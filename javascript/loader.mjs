@@ -1,6 +1,9 @@
 import { Strip } from './app.mjs';
 import { getTab, getElement } from './gradio-adapter.mjs';
 
+let canvas = null;
+let timers = null;
+
 let currentTab = 'txt2img';
 function checkForTabChange(canvas) {
   const tab = getTab();
@@ -83,15 +86,55 @@ function setupCanvas(tabname) {
   }px 16px 1fr`;
 }
 
+function render(show = true) {
+  localStorage.setItem('A111-editor-active', show);
+  const toggle = document.querySelector('#A111-editor-toggle input');
+  if (toggle) {
+    toggle.checked = show;
+  }
+
+  if (show) {
+    // initialize the canvas
+    setupCanvas('txt2img');
+    setupCanvas('inpaint');
+
+    const container = getElement('canvas');
+    canvas = new Strip(container);
+
+    timers = setInterval(() => {
+      checkForImageGeneration(canvas);
+      checkForTabChange(canvas);
+    }, 250);
+  } else {
+    // destroy the canvas
+    if (canvas) {
+      canvas.destroy();
+    }
+
+    if (timers) {
+      clearInterval(timers);
+    }
+
+    const containers = document.querySelectorAll('.canvas_container');
+    containers.forEach((container) => container.remove());
+  }
+}
+
 onUiLoaded(function () {
-  setupCanvas('txt2img');
-  setupCanvas('inpaint');
+  const active = localStorage.getItem('A111-editor-active');
+  if (active === null || active === 'true') {
+    // 1. if the editor has never been run (null value), initialize it
+    // 2. if we know the editor was left open, initialize it
+    render(true);
+  }
 
-  const container = getElement('canvas');
-  const canvas = new Strip(container);
+  // toggle in the settings menu on the left side
+  const toggle = document.querySelector('#A111-editor-toggle input');
+  if (!toggle) {
+    return;
+  }
 
-  setInterval(() => {
-    checkForImageGeneration(canvas);
-    checkForTabChange(canvas);
-  }, 250);
+  toggle.addEventListener('change', (event) => {
+    render(event.target.checked);
+  });
 });

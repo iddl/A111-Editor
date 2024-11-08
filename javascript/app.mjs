@@ -30,13 +30,25 @@ class Strip {
     this.setupKeyEvents();
     this.setupZoomPan();
 
-    setInterval(() => {
-      this.updateDimensions();
-    }, 500);
+    // we're going to keep track of timers so that we can destroy them
+    this.timers = [];
+    this.timers.push(
+      setInterval(() => {
+        this.updateDimensions();
+      }, 500)
+    );
 
-    setInterval(() => {
-      this.saveSession();
-    }, 30000);
+    this.timers.push(
+      setInterval(() => {
+        this.saveSession();
+      }, 30000)
+    );
+  }
+
+  destroy() {
+    this.timers.forEach((timer) => clearInterval(timer));
+    this.timers = [];
+    this.canvas.destroy();
   }
 
   saveSession() {
@@ -67,6 +79,8 @@ class Strip {
   }
 
   setContainer(container) {
+    // this primarily gets called when we have to move the canvas
+    // from the txt2img tab to inpaint tab
     this.container = container;
     this.updateDimensions();
   }
