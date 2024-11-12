@@ -1,6 +1,6 @@
 ![Logo](logo.svg)
 
-An image sequence generator compatible with [Stable Diffusion web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+An image sequence generator compatible with [Stable Diffusion web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) and [Stable Diffusion WebUI Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge)
 
 ⚠️ Heads up! This editor and its code is experimental. Expect the unexpected and share your thoughts on the Discord server below. Early feedback is super valuable.
 
@@ -19,6 +19,12 @@ https://github.com/user-attachments/assets/48dbf387-3f0b-4227-979b-e6850ba701a9
 - Quickly tweak any generation by reusing its prompt
 - Integrated image editor
 - Easy inpaint workflow
+
+
+
+https://github.com/user-attachments/assets/46d957d7-6bde-4068-8409-5890003de455
+
+
 
 # Install
 
