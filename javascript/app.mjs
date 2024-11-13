@@ -323,6 +323,7 @@ class Strip {
       e.preventDefault();
       e.stopPropagation();
 
+      // updates the menubar to show "reset zoom"
       debouncedMenuRender();
     });
 

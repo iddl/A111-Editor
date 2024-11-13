@@ -77,7 +77,22 @@ async function usePrompt(dataURL) {
 }
 
 async function sendToSAM(dataURL) {
+  // this is a very rudimental way to check if we're on Forge
+  const isForge = typeof ForgeCanvas === 'function';
+
   switch_to_txt2img();
+  const segmentButton = Array.from(
+    // Forge runs on Gradio 4 which seems to have changed how labels or button work
+    // so for now, we need to have these statements
+    document.querySelectorAll(
+      `#txt2img_script_container ${isForge ? 'button' : '.label-wrap'}`
+    )
+  ).find(
+    (button) => button.querySelector('span')?.textContent === 'Segment Anything'
+  );
+  if (segmentButton && !segmentButton.classList.contains('open')) {
+    segmentButton.click();
+  }
   const dataTransfer = await urlToDataTransfer(dataURL);
   const dropTarget = gradioApp().querySelector(
     '#txt2img_sam_input_image input[type="file"]'
@@ -93,15 +108,29 @@ async function sendInpaint({
   mask = null,
   img2imgSettings = null,
 }) {
-  let inpaintContainer = null;
+  // this is a very rudimental way to check if we're on Forge
+  const isForge = typeof ForgeCanvas === 'function';
+
+  const fileDropLocations = isForge
+    ? {
+        withMaskUpload: '#img2img_inpaint_upload_tab #img_inpaint_base button',
+        inpaint: '#img2img_inpaint_tab div.forge-image-container',
+      }
+    : {
+        withMaskUpload:
+          '#img2img_inpaint_upload_tab #img_inpaint_base .svelte-116rqfv',
+        inpaint: '#img2img_inpaint_tab .svelte-116rqfv',
+      };
+
+  let fileDropDOM = null;
   if (mask) {
     // if mask is present, do inpaint upload
     switch_to_img2img_tab(4);
-    inpaintContainer = '#img_inpaint_base .svelte-116rqfv';
+    fileDropDOM = fileDropLocations.withMaskUpload;
   } else {
     // else do manual inpaint
     switch_to_img2img_tab(2);
-    inpaintContainer = '#img2img_inpaint_tab .svelte-116rqfv';
+    fileDropDOM = fileDropLocations.inpaint;
   }
   setDimensionSliders(width, height, 'inpaint');
 
@@ -111,7 +140,7 @@ async function sendInpaint({
     bubbles: true,
     dataTransfer: dataTransfer,
   });
-  document.querySelector(inpaintContainer).dispatchEvent(dropEvent);
+  document.querySelector(fileDropDOM).dispatchEvent(dropEvent);
 
   if (!mask) {
     return;
@@ -128,9 +157,10 @@ async function sendInpaint({
     bubbles: true,
     dataTransfer: maskDataTransfer,
   });
-  document
-    .querySelector('#img_inpaint_mask .svelte-116rqfv')
-    .dispatchEvent(maskDropEvent);
+  const maskContainer = isForge
+    ? '#img2img_inpaint_upload_tab #img_inpaint_mask button'
+    : '#img2img_inpaint_upload_tab #img_inpaint_mask .svelte-116rqfv';
+  document.querySelector(maskContainer).dispatchEvent(maskDropEvent);
 }
 
 function debounce(func, delay) {
