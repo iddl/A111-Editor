@@ -17,7 +17,12 @@ https://github.com/user-attachments/assets/48dbf387-3f0b-4227-979b-e6850ba701a9
 
 https://github.com/user-attachments/assets/46d957d7-6bde-4068-8409-5890003de455
 
-- Blend characters with new backgrounds
+### Blend characters with new backgrounds (early release)
+
+https://github.com/user-attachments/assets/f564f068-03eb-4d2f-8275-eaa0aaecb8a6
+
+
+  
 - Quickly tweak any generation by reusing its prompt
 - Integrated image editor
 
