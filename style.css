@@ -1,8 +1,16 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter&display=swap");
 
+.canvas_container {
+	z-index: 0; /* Set a local z-index ctx for the workspace */
+}
+
 .canvas_container nav {
     margin-top: -3px; /* Fix the gap between the top of the page and the nav */
     font-family: "Inter", sans-serif;
+	position: sticky;
+	top: 0;
+	z-index: 1; /* Allows it to float on top of the canvas when sticky */
+	background: var(--panel-background-fill); /* Needs to remember background color when sticky */
 }
 
 .canvas_container nav ul{
