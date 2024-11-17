@@ -31,7 +31,7 @@ https://github.com/user-attachments/assets/f564f068-03eb-4d2f-8275-eaa0aaecb8a6
 ⚠️ Heads up! This editor and its code is experimental. Expect the unexpected and share your thoughts on the Discord server below. Early feedback is super valuable.
 
 1. Go to the extension tab and select "Install from URL"
-2. Copy `https://github.com/iddl/sd-sequence-editor.git` under _URL for extension's git repository_ field
+2. Copy `https://github.com/iddl/A111-Editor.git` under _URL for extension's git repository_ field
 3. Click install
 4. Restart Automatic1111
 
