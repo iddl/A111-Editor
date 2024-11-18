@@ -165,7 +165,7 @@ class Strip {
     });
 
     document.addEventListener('keydown', (e) => {
-      /**
+      /*
        * Zoom & pan
        * Most events are not executed if canvas is not focused, but this needs
        * because users might click the meta key before coming back to the canvas
@@ -180,20 +180,46 @@ class Strip {
         return;
       }
 
-      /**
-       * History
+      /*
+       * Deleting objects (backspace)
        */
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'z') {
-          this.undo();
-        }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        this.deleteSelection();
+        return;
+      }
+
+      // /*
+      //  * Crop actions ('c')
+      //  */
+      // if (e.key === 'c') {
+      //   let selected = this.canvas.getActiveObjects();
+      //   const clipper = selected.find((obj) => {
+      //     return obj instanceof Rect && obj.isclipper;
+      //   });
+      //   if (clipper) {
+      //     this.executeCrop(clipper);
+      //   }
+      //   return;
+      // }
+
+      // Everything below is a combo of ctrl/meta + key
+      // early return if ctrl/meta aren't pressed
+      if (!e.ctrlKey && !e.metaKey) {
+        return;
       }
 
       /*
-       * Clipboard actions
+       * History (ctrl+z)
+       */
+      if (e.key === 'z') {
+        this.undo();
+      }
+
+      /*
+       * Clipboard (ctrl+c, ctrl+v)
        */
 
-      if (e.ctrlKey && e.key === 'c') {
+      if (e.key === 'c') {
         const selected = this.canvas.getActiveObjects();
         const image = selected.find((obj) => obj instanceof FabricImage);
         if (!image) {
@@ -204,7 +230,7 @@ class Strip {
         });
       }
 
-      if (e.ctrlKey && e.key === 'v') {
+      if (e.key === 'v') {
         const image = this.clipboard;
         if (!(image instanceof FabricImage)) {
           return;
@@ -214,26 +240,19 @@ class Strip {
         this.canvas.add(image);
       }
 
-      /**
-       * Debugger for dev purposes
+      /*
+       * Debugger for dev purposes (ctrl+d)
        */
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'd') {
-          console.log(this.canvas);
-          debugger;
-          e.preventDefault();
-        }
+      if (e.key === 'd') {
+        console.log(this.canvas);
+        debugger;
+        e.preventDefault();
       }
 
-      if (e.ctrlKey && e.key === 'm') {
-        this.inpaint({ detectEdges: false });
-        return;
-      }
-
-      /**
-       * Change stacking order
+      /*
+       * Change stacking order (ctrl+[ and ctrl+])
        */
-      if (e.ctrlKey && e.key === '[') {
+      if (e.key === '[') {
         let selected = this.canvas.getActiveObjects();
         let image = selected.find((obj) => obj instanceof FabricImage);
         if (image) {
@@ -243,7 +262,7 @@ class Strip {
         return;
       }
 
-      if (e.ctrlKey && e.key === ']') {
+      if (e.key === ']') {
         let selected = this.canvas.getActiveObjects();
         let image = selected.find((obj) => obj instanceof FabricImage);
         if (image) {
@@ -252,53 +271,6 @@ class Strip {
         }
         return;
       }
-
-      /**
-       * Deleting objects
-       */
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        this.deleteSelection();
-        return;
-      }
-
-      let selected = this.canvas.getActiveObjects();
-
-      /**
-       * Crop actions
-       */
-      if (e.key === 'c') {
-        const clipper = selected.find((obj) => {
-          return obj instanceof Rect && obj.isclipper;
-        });
-        if (clipper) {
-          this.executeCrop(clipper);
-        }
-        return;
-      }
-
-      if (!(e.shiftKey && e.key === 'E')) {
-        return;
-      }
-
-      let image = selected.find((obj) => obj instanceof FabricImage);
-      let panel = selected.find((obj) => obj instanceof Rect);
-
-      if (!image || !panel) {
-        return;
-      }
-
-      let groupMatrix = panel.group.calcTransformMatrix();
-
-      image.clipPath = new Rect({
-        left: panel.left + groupMatrix[4],
-        top: panel.top + groupMatrix[5],
-        width: panel.width,
-        height: panel.height,
-        originX: 'left',
-        originY: 'top',
-        absolutePositioned: true,
-      });
-      this.canvas.renderAll();
     });
   }
 
@@ -581,7 +553,18 @@ class Strip {
   addSampleFraming() {
     // Draw text on the canvas
     const text = new Text(
-      `Welcome to Ａ１１１ Ｅｄｉｔｏｒ.\nClick "Generate" to add your first generation to the canvas.\nFeel free to move and resize it as you like.`,
+      `      Welcome to Ａ１１１ Ｅｄｉｔｏｒ.
+
+      Click "Generate" to add your first image.
+      Feel free to move and resize it as you like.
+
+      Shortcuts (Ctrl or ⌘):
+      Ctrl + [ : Send to back
+      Ctrl + ] : Bring to front
+      Ctrl + z : Undo
+      Ctrl + c : Copy
+      Ctrl + v : Paste
+      `,
       {
         left: 420,
         top: 50,
