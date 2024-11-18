@@ -64,6 +64,13 @@ class Strip {
       const transaction = db.transaction('canvasData', 'readwrite');
       const objectStore = transaction.objectStore('canvasData');
       const canvasData = this.serialize();
+      // Skip all objects that shouldn't be saved, specifically right now:
+      // - Clipping masks (because it's tricky to keep a reference to their original image)
+      // - Intro text
+      canvasData.objects = canvasData.objects.filter(
+        (obj) => !obj.noPersistence
+      );
+
       const request = objectStore.put(canvasData, 'canvasData');
       request.onsuccess = () => {
         console.log('Canvas data saved to IndexedDB');
@@ -121,7 +128,7 @@ class Strip {
   }
 
   loadJSON(data) {
-    if (data) {
+    if (data && data.objects.length) {
       this.canvas.loadFromJSON(
         data,
         debounce(() => {
@@ -137,7 +144,11 @@ class Strip {
   }
 
   serialize() {
-    return this.canvas.toObject(['hasTransparency']);
+    return this.canvas.toObject([
+      'hasTransparency',
+      'isClipper',
+      'noPersistence',
+    ]);
   }
 
   setupKeyEvents() {
@@ -187,20 +198,6 @@ class Strip {
         this.deleteSelection();
         return;
       }
-
-      // /*
-      //  * Crop actions ('c')
-      //  */
-      // if (e.key === 'c') {
-      //   let selected = this.canvas.getActiveObjects();
-      //   const clipper = selected.find((obj) => {
-      //     return obj instanceof Rect && obj.isclipper;
-      //   });
-      //   if (clipper) {
-      //     this.executeCrop(clipper);
-      //   }
-      //   return;
-      // }
 
       // Everything below is a combo of ctrl/meta + key
       // early return if ctrl/meta aren't pressed
@@ -349,7 +346,7 @@ class Strip {
   }
 
   updateHistory() {
-    this.history.push(this.canvas.toObject());
+    this.history.push(this.serialize());
   }
 
   clearCanvas() {
@@ -572,6 +569,7 @@ class Strip {
         fontWeight: 'bold',
         fill: '#b0a0a0',
         fontSize: 20,
+        noPersistence: true,
       }
     );
     this.canvas.add(text);
@@ -584,6 +582,7 @@ class Strip {
           top: 50,
           left: 50,
           scale: 0.75,
+          noPersistence: true,
         })
       );
     };
@@ -704,16 +703,19 @@ class Strip {
     let r = new Rect({
       left: image.left,
       top: image.top,
-      width: 50,
-      height: 50,
-      stroke: 'blue',
+      width: 200,
+      height: 200,
+      fill: 'rgba(0, 0, 0, 0.5)',
+      stroke: '#de0a26',
       strokeWidth: 2,
+      strokeDashArray: [5, 5],
       fill: '',
       originX: 'left',
       originY: 'top',
       // custom attributes for crop area
       imageRef: image,
-      isclipper: true,
+      isClipper: true,
+      noPersistence: true,
     });
     this.canvas.add(r);
   }

@@ -1,4 +1,4 @@
-import { FabricImage } from './lib-fabric.mjs';
+import { FabricImage, Rect } from './lib-fabric.mjs';
 import { sendTxt2Img, sendToSAM, generateImage } from './gradio-adapter.mjs';
 import { editInPhotopea } from './photopea.mjs';
 
@@ -193,8 +193,19 @@ class Menu {
       li.appendChild(a);
       this.container.appendChild(li);
     });
+  }
 
-    // this.renderExtraMenu();
+  renderForClipper(clipper, app) {
+    let actions = [];
+
+    actions.push({
+      name: `Crop to selection`,
+      handler: (e) => {
+        app.executeCrop(clipper);
+      },
+    });
+
+    this.renderActions(actions, app);
   }
 
   render(app) {
@@ -206,6 +217,9 @@ class Menu {
     if (selection.length === 1 && selection[0] instanceof FabricImage) {
       // we can only handle one image at a time now, no shapes, no other things
       this.renderForImage(selection[0], app);
+      return;
+    } else if (selection[0] instanceof Rect && selection[0].isClipper) {
+      this.renderForClipper(selection[0], app);
       return;
     } else {
       // right now, we can't handle groups
