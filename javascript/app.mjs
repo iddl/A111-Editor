@@ -652,6 +652,8 @@ class Strip {
       width: Math.ceil(width / this.canvas.getZoom()),
       height: Math.ceil(height / this.canvas.getZoom()),
       mask,
+      // used to copy the prompt to help with inpainting
+      originalImage: area instanceof FabricImage ? area.getSrc() : null,
     });
 
     // readjust the borders of the selector tool

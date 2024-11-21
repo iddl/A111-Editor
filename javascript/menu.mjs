@@ -53,7 +53,7 @@ class Menu {
       actions.push({
         name: 'Use Prompt',
         handler: () => {
-          sendTxt2Img(src);
+          sendTxt2Img({ dataURL: src });
         },
       });
     }
