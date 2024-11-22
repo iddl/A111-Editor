@@ -1,4 +1,5 @@
 import Exifr from './lib-exifr.mjs';
+import { spawnNotification } from './notifications.mjs';
 
 /*
  * Basic page utils
@@ -116,9 +117,35 @@ async function sendToSAM(dataURL) {
   ).find(
     (button) => button.querySelector('span')?.textContent === 'Segment Anything'
   );
-  if (segmentButton && !segmentButton.classList.contains('open')) {
+
+  // Segment anything is not installed, show instructions stop here
+  if (!segmentButton) {
+    spawnNotification({
+      icon: 'up',
+      title: 'Segment Anything required',
+      subtitle: 'Click "Install" to go to the extension install page.',
+      actions: [
+        {
+          name: 'Install',
+          handler: () => {
+            window.open(
+              'https://github.com/iddl/A111-Editor/blob/main/docs/segment-anything.md',
+              '_blank'
+            );
+          },
+        },
+        {
+          name: 'Close',
+        },
+      ],
+    });
+    return;
+  }
+
+  if (!segmentButton.classList.contains('open')) {
     segmentButton.click();
   }
+
   const dataTransfer = await urlToDataTransfer(dataURL);
   const dropTarget = gradioApp().querySelector(
     '#txt2img_sam_input_image input[type="file"]'

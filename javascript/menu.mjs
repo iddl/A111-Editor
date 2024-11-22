@@ -78,7 +78,7 @@ class Menu {
 
     if (src) {
       actions.push({
-        name: 'Extract character',
+        name: 'Extract subject',
         handler: () => {
           sendToSAM(src);
         },
