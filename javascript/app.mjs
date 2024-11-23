@@ -707,23 +707,35 @@ class Strip {
   }
 
   addClipper(image) {
+    const center = image.getCenterPoint();
+    const w = image.getScaledWidth() * 0.75;
+    const h = image.getScaledHeight() * 0.75;
     let r = new Rect({
-      left: image.left,
-      top: image.top,
-      width: 200,
-      height: 200,
+      left: center.x - w / 2,
+      top: center.y - h / 2,
+      width: w,
+      height: h,
       fill: 'rgba(0, 0, 0, 0.5)',
       stroke: '#de0a26',
       strokeWidth: 2,
-      strokeDashArray: [5, 5],
-      fill: '',
-      originX: 'left',
-      originY: 'top',
       // custom attributes for crop area
       imageRef: image,
       isClipper: true,
       noPersistence: true,
     });
+
+    // Make sure the crop area doesn't go outside the image
+    // it's still fragile, corners don't respect this rule
+    // and you can still move the image underneath, but it's a start
+    for (const control of Object.values(r.controls)) {
+      const originalHandler = control.actionHandler;
+      control.actionHandler = (eventData, transform, x, y) => {
+        const aCoords = image.calcACoords();
+        const newX = Math.max(aCoords.tl.x, Math.min(aCoords.br.x, x));
+        const newY = Math.max(aCoords.tl.y, Math.min(aCoords.br.y, y));
+        return originalHandler(eventData, transform, newX, newY);
+      };
+    }
     this.canvas.add(r);
   }
 
