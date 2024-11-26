@@ -3,13 +3,14 @@ import {
   Rect,
   Point,
   util,
+  Group,
   FabricImage,
   Text,
   Control,
   util as fabricUtil,
 } from './lib-fabric.mjs'; // browser
 import { Menu } from './menu.mjs';
-import { debounce, sendInpaint } from './gradio-adapter.mjs';
+import { debounce, sendInpaint, getMergedPrompt } from './gradio-adapter.mjs';
 import { initNotifications } from './notifications.mjs';
 
 const logo =
@@ -700,6 +701,32 @@ class Strip {
 
     blob = await response.blob();
     return blob;
+  }
+
+  async mergeImages(group) {
+    const dataURL = group.toDataURL({ format: 'png' });
+
+    const sources = group
+      .getObjects()
+      .filter((obj) => obj instanceof FabricImage)
+      .map((obj) => obj.getSrc());
+    const newPrompt = await getMergedPrompt(sources);
+    // TODO write the prompt to the png header
+
+    const img = new Image();
+    img.onload = () => {
+      const merged = new FabricImage(img, {
+        top: group.top,
+        left: group.left,
+        scale: 1,
+      });
+      group.forEachObject((obj) => {
+        this.canvas.remove(obj);
+      });
+      this.canvas.add(merged);
+      this.canvas.setActiveObject(merged);
+    };
+    img.src = dataURL;
   }
 
   addClipper(image) {

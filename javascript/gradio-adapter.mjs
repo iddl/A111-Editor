@@ -78,7 +78,34 @@ async function urlToDataTransfer(url) {
   return dt;
 }
 
-async function getGenerationParams(src) {
+async function getMergedPrompt(sources) {
+  // This is a very rudimentary way to take multiple propmts and pick the best one
+  const prompts = await Promise.all(sources.map((src) => getPrompt(src)));
+  const scoredPrompts = prompts.map((prompt) => {
+    let score = 0;
+    if (!prompt) {
+      score = 0;
+    } else if (prompt.includes('Mask blur')) {
+      // inpaint prompts usually describe a small detail rather than the full image
+      // so they're less likely to be as good as full txt2img prompts
+      score = 1;
+    } else {
+      score = 2;
+    }
+    return { prompt, score };
+  });
+
+  const bestPrompt = scoredPrompts.reduce(
+    (best, current) => {
+      return current.score > best.score ? current : best;
+    },
+    { prompt: null, score: 0 }
+  );
+
+  return bestPrompt.prompt;
+}
+
+async function getPrompt(src) {
   const response = await fetch(src);
   const blob = await response.blob();
 
@@ -95,7 +122,7 @@ async function getGenerationParams(src) {
 }
 
 async function usePrompt({ dataURL = null, skipFileUpload = false }) {
-  let params = await getGenerationParams(dataURL);
+  let params = await getPrompt(dataURL);
   if (!params) {
     return;
   }
@@ -258,4 +285,5 @@ export {
   getTab,
   getElement,
   generateImage,
+  getMergedPrompt,
 };

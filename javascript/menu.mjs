@@ -1,4 +1,4 @@
-import { FabricImage, Rect } from './lib-fabric.mjs';
+import { FabricImage, Rect, Group } from './lib-fabric.mjs';
 import { sendTxt2Img, sendToSAM, generateImage } from './gradio-adapter.mjs';
 import { editInPhotopea } from './photopea.mjs';
 
@@ -62,7 +62,7 @@ class Menu {
       actions.push({
         name: 'Inpaint',
         handler: () => {
-          app.inpaint({ detectEdges: false });
+          app.inpaint({ area: image, detectEdges: false });
         },
       });
     }
@@ -71,7 +71,7 @@ class Menu {
       actions.push({
         name: 'Blend with background',
         handler: () => {
-          app.inpaint({ detectEdges: true, alphaSrc: src });
+          app.inpaint({ area: image, detectEdges: true, alphaSrc: src });
         },
       });
     }
@@ -208,23 +208,36 @@ class Menu {
     this.renderActions(actions, app);
   }
 
+  renderForImageGroup(images, app) {
+    let actions = [];
+
+    actions.push({
+      name: 'Merge images',
+      handler: (e) => {
+        app.mergeImages(images);
+      },
+    });
+
+    this.renderActions(actions, app);
+  }
+
   render(app) {
-    const selection = app.canvas.getActiveObjects();
-    if (selection.length === 0) {
+    const selection = app.canvas.getActiveObject();
+    if (!selection) {
+      // nothing selected
       this.renderUnselected(app);
-      return;
-    }
-    if (selection.length === 1 && selection[0] instanceof FabricImage) {
-      // we can only handle one image at a time now, no shapes, no other things
-      this.renderForImage(selection[0], app);
-      return;
-    } else if (selection[0] instanceof Rect && selection[0].isClipper) {
-      this.renderForClipper(selection[0], app);
-      return;
+    } else if (selection instanceof FabricImage) {
+      // one image selected
+      this.renderForImage(selection, app);
+    } else if (selection instanceof Rect && selection.isClipper) {
+      // clipper selected
+      this.renderForClipper(selection, app);
+    } else if (selection instanceof Group) {
+      // multiple images selected
+      this.renderForImageGroup(selection, app);
     } else {
-      // right now, we can't handle groups
+      // ignore other cases
       this.renderUnselected(app);
-      return;
     }
   }
 }
