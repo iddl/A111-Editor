@@ -4,6 +4,17 @@
 	z-index: 0; /* Set a local z-index ctx for the workspace */
 }
 
+@media (max-width: 1200px) {
+	.canvas_container {
+		/* there is too much padding by gradio containers, this removes some */
+		margin-left: -10px;
+		margin-right: -10px;
+
+		/* without this the canvas sticks inside the positive prompt box, looking bad */
+		margin-bottom: 10px;
+	}
+}
+
 .canvas_container nav {
     margin-top: -3px; /* Fix the gap between the top of the page and the nav */
     font-family: "Inter", sans-serif;
@@ -14,10 +25,11 @@
 }
 
 .canvas_container nav ul{
-    list-style-type: none;
-    display: flex;
-    align-items: center;
-    margin-bottom: 3px;
+	list-style-type: none;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	margin-bottom: 3px;
 }
 
 .canvas_container nav ul li{

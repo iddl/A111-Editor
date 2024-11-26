@@ -8,7 +8,9 @@ import { spawnNotification } from './notifications.mjs';
 const selectors = {
   txt2img: {
     location: '#txt2img_results_panel',
-    canvas: '#txt2img_results_panel .canvas_container',
+    // right under the tab picker on mobile
+    locationMobile: '#tab_txt2img',
+    canvas: '#tab_txt2img .canvas_container',
     prompt: '#txt2img_prompt textarea',
     gallery: '#txt2img_gallery',
     width: '#txt2img_width input[type=number]',
@@ -19,7 +21,8 @@ const selectors = {
   },
   inpaint: {
     location: '#img2img_results_panel',
-    canvas: '#img2img_results_panel .canvas_container',
+    locationMobile: '#tab_img2img',
+    canvas: '#tab_img2img .canvas_container',
     prompt: '#img2img_prompt textarea',
     gallery: '#img2img_gallery',
     width: '#img2img_width input[type=number]',
@@ -43,6 +46,11 @@ function getTab() {
 
 function getElement(name, tab = null) {
   tab = tab || getTab();
+
+  if (name === 'location' && window.innerWidth < 1200) {
+    name = 'locationMobile';
+  }
+
   return gradioApp().querySelector(selectors[tab][name]);
 }
 

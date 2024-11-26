@@ -118,7 +118,9 @@ class Strip {
     }
     this.canvas.setDimensions({
       width: containerWidth,
-      height: 1800,
+      // there isn't too much science here, 1.3 multiplier looks generally good
+      // on mobile, the length of the canvas ends up fitting within the viewport
+      height: Math.max(containerWidth * 1.3, 700),
     });
   }
 
