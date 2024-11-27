@@ -10,7 +10,8 @@ import {
   util as fabricUtil,
 } from './lib-fabric.mjs'; // browser
 import { Menu } from './menu.mjs';
-import { debounce, sendInpaint, getMergedPrompt } from './gradio-adapter.mjs';
+import { debounce, sendInpaint } from './gradio-adapter.mjs';
+import { mergePrompts, setPrompt } from './prompt.mjs';
 import { initNotifications } from './notifications.mjs';
 
 const logo =
@@ -704,15 +705,18 @@ class Strip {
   }
 
   async mergeImages(group) {
-    const dataURL = group.toDataURL({ format: 'png' });
-
+    // figure out which prompt to use when merging the images
     const sources = group
       .getObjects()
       .filter((obj) => obj instanceof FabricImage)
       .map((obj) => obj.getSrc());
-    const newPrompt = await getMergedPrompt(sources);
-    // TODO write the prompt to the png header
+    const mergedPrompt = await mergePrompts(sources);
 
+    // snap a png image of the group containing the images
+    let dataURL = group.toDataURL({ format: 'png' });
+    dataURL = await setPrompt(dataURL, mergedPrompt);
+
+    // add the png to the canvas and remove the individual images
     const img = new Image();
     img.onload = () => {
       const merged = new FabricImage(img, {

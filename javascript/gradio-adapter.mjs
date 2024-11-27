@@ -1,5 +1,5 @@
-import Exifr from './lib-exifr.mjs';
 import { spawnNotification } from './notifications.mjs';
+import { getPrompt } from './prompt.mjs';
 
 /*
  * Basic page utils
@@ -76,49 +76,6 @@ async function urlToDataTransfer(url) {
   const dt = new DataTransfer();
   dt.items.add(new File([blob], 'mask.png', { type: 'image/png' }));
   return dt;
-}
-
-async function getMergedPrompt(sources) {
-  // This is a very rudimentary way to take multiple propmts and pick the best one
-  const prompts = await Promise.all(sources.map((src) => getPrompt(src)));
-  const scoredPrompts = prompts.map((prompt) => {
-    let score = 0;
-    if (!prompt) {
-      score = 0;
-    } else if (prompt.includes('Mask blur')) {
-      // inpaint prompts usually describe a small detail rather than the full image
-      // so they're less likely to be as good as full txt2img prompts
-      score = 1;
-    } else {
-      score = 2;
-    }
-    return { prompt, score };
-  });
-
-  const bestPrompt = scoredPrompts.reduce(
-    (best, current) => {
-      return current.score > best.score ? current : best;
-    },
-    { prompt: null, score: 0 }
-  );
-
-  return bestPrompt.prompt;
-}
-
-async function getPrompt(src) {
-  const response = await fetch(src);
-  const blob = await response.blob();
-
-  // Convert the blob to a data URI
-  const reader = new FileReader();
-  reader.readAsDataURL(blob);
-  await new Promise((resolve) => {
-    reader.onloadend = resolve;
-  });
-  const dataUri = reader.result;
-
-  const exifData = await Exifr.parse(dataUri);
-  return exifData?.parameters;
 }
 
 async function usePrompt({ dataURL = null, skipFileUpload = false }) {
@@ -285,5 +242,4 @@ export {
   getTab,
   getElement,
   generateImage,
-  getMergedPrompt,
 };
