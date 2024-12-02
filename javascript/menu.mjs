@@ -94,6 +94,15 @@ class Menu {
       });
     }
 
+    if (src) {
+      actions.push({
+        name: 'Outpaint',
+        handler: () => {
+          app.addOutpaintArea(image);
+        },
+      });
+    }
+
     if (image.clipPath) {
       actions.push({
         name: 'Uncrop',
@@ -221,6 +230,19 @@ class Menu {
     this.renderActions(actions, app);
   }
 
+  renderForOutpaint(outpaint, app) {
+    let actions = [];
+
+    actions.push({
+      name: 'Outpaint area',
+      handler: (e) => {
+        app.inpaint({ area: outpaint, mode: 'outpaint', detectEdges: false });
+      },
+    });
+
+    this.renderActions(actions, app);
+  }
+
   render(app) {
     const selection = app.canvas.getActiveObject();
     if (!selection) {
@@ -232,6 +254,9 @@ class Menu {
     } else if (selection instanceof Rect && selection.isClipper) {
       // clipper selected
       this.renderForClipper(selection, app);
+    } else if (selection instanceof Rect && selection.isOutpaintArea) {
+      // clipper selected
+      this.renderForOutpaint(selection, app);
     } else if (selection instanceof Group) {
       // multiple images selected
       this.renderForImageGroup(selection, app);

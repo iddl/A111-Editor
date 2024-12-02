@@ -264,7 +264,7 @@ class Strip {
        * Debugger for dev purposes (ctrl+d)
        */
       if (e.key === 'd') {
-        console.log(this.canvas);
+        const el = this.canvas.getActiveObject();
         debugger;
         e.preventDefault();
       }
@@ -620,14 +620,19 @@ class Strip {
     this.canvas.renderAll();
   }
 
-  async inpaint({ area = null, detectEdges = false, alphaSrc = null }) {
+  async inpaint({
+    area = null,
+    mode = 'inpaint',
+    detectEdges = false,
+    alphaSrc = null,
+  }) {
     if (!area) {
       return;
     }
 
     // remove the borders of the selector tool before getting the image
-    if (area.isInpaintSelector) {
-      area.strokeWidth = 0;
+    if (area.isInpaintSelector || area.isOutpaintArea) {
+      area.visible = false;
       this.canvas.renderAll();
     }
 
@@ -665,6 +670,14 @@ class Strip {
       mask = await this.getEdgeMask(alphaSrc);
     }
 
+    // this is used to propagate the original prompt to the inpainting service
+    let originalImage = null;
+    if (area instanceof FabricImage) {
+      originalImage = area.getSrc();
+    } else if (area.isOutpaintArea || area.isClipper) {
+      originalImage = area.imageRef.getSrc();
+    }
+
     sendInpaint({
       dataURL,
       // same comment about zoom as above
@@ -672,12 +685,12 @@ class Strip {
       height: Math.ceil(height / this.canvas.getZoom()),
       mask,
       // used to copy the prompt to help with inpainting
-      originalImage: area instanceof FabricImage ? area.getSrc() : null,
+      originalImage: originalImage,
     });
 
     // readjust the borders of the selector tool
     if (area.isInpaintSelector) {
-      area.strokeWidth = 1;
+      area.visible = true;
       this.canvas.renderAll();
     }
   }
@@ -731,6 +744,71 @@ class Strip {
       this.canvas.setActiveObject(merged);
     };
     img.src = dataURL;
+  }
+
+  addOutpaintArea(image) {
+    const maxSize = 1500;
+
+    const center = image.getCenterPoint();
+    const w = Math.min(image.getScaledWidth(), maxSize);
+    const h = Math.min(image.getScaledHeight(), maxSize);
+    let r = new Rect({
+      left: center.x - w / 2,
+      top: center.y - h / 2,
+      width: w,
+      height: h,
+      fill: 'rgba(0, 0, 0, 0.5)',
+      stroke: 'blue',
+      strokeWidth: 2,
+      lockMovementX: true,
+      lockMovementY: true,
+      // custom attributes for outpaint
+      imageRef: image,
+      isOutpaintArea: true,
+      noPersistence: true,
+    });
+
+    r.controls.tr.setVisibility(false);
+    r.controls.tl.setVisibility(false);
+    r.controls.bl.setVisibility(false);
+    r.controls.br.setVisibility(false);
+    r.controls.mtr.setVisibility(false);
+
+    // r.on('scaling', () => {
+    //   if (r.scaleX < 0) {
+    //     r.scaleX = 0;
+    //   }
+    //   if (r.scaleY < 0) {
+    //     r.scaleY = 0;
+    //   }
+
+    //   if (r.width * r.scaleX > maxSize) {
+    //     r.scaleX = maxSize / r.width;
+    //   }
+    //   if (r.height * r.scaleY > maxSize) {
+    //     r.scaleY = maxSize / r.height;
+    //   }
+    // });
+
+    // Make sure the crop area doesn't go outside the image
+    // it's still fragile, corners don't respect this rule
+    // and you can still move the image underneath, but it's a start
+    for (const control of [r.controls.mr, r.controls.ml]) {
+      const originalHandler = control.actionHandler;
+      control.actionHandler = (eventData, transform, x, y) => {
+        console.log(transform.scaleX);
+        const newWidth = transform.target.width * transform.target.scaleX;
+        if (newWidth >= maxSize) {
+          transform.target.scaleX = maxSize / transform.target.width;
+          return true;
+        }
+        return originalHandler(eventData, transform, x, y);
+      };
+    }
+
+    this.canvas.add(r);
+    // make sure we're manipulating the outpaint area now
+    this.canvas.setActiveObject(r);
   }
 
   addClipper(image) {
