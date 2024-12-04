@@ -222,6 +222,16 @@ class Strip {
         return;
       }
 
+      /*
+       * Executing actions when pressing Enter
+       */
+      if (e.key === 'Enter') {
+        const activeObject = this.canvas.getActiveObject();
+        if (activeObject && activeObject.isClipper) {
+          this.executeCrop(activeObject);
+        }
+      }
+
       // Everything below is a combo of ctrl/meta + key
       // early return if ctrl/meta aren't pressed
       if (!e.ctrlKey && !e.metaKey) {
