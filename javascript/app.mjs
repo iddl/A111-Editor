@@ -223,6 +223,16 @@ class Strip {
         return;
       }
 
+      /*
+       * Executing actions when pressing Enter
+       */
+      if (e.key === 'Enter') {
+        const activeObject = this.canvas.getActiveObject();
+        if (activeObject && activeObject.isClipper) {
+          this.executeCrop(activeObject);
+        }
+      }
+
       // Everything below is a combo of ctrl/meta + key
       // early return if ctrl/meta aren't pressed
       if (!e.ctrlKey && !e.metaKey) {
@@ -844,24 +854,43 @@ class Strip {
     // remove the borders of the selector tool before getting the image
     if (area.noPersistence) {
       area.visible = false;
-      this.canvas.renderAll();
     }
+
+    let originalImage = null;
+    if (area instanceof FabricImage) {
+      originalImage = area;
+    } else if (area.imageRef instanceof FabricImage) {
+      originalImage = area.imageRef;
+    }
+
+    // Without this, borders get rasterized in the image pixels
+    // this backs up the stroke width and sets it to 0.
+    // Original stroke is restored after the snapshot is taken.
+    let strokeWidth = 0;
+    if (originalImage) {
+      strokeWidth = originalImage.strokeWidth;
+      originalImage.strokeWidth = 0;
+      // Surprisingly, renderAll() does not update the bounding box size,
+      // which changes after removing the border. The old bounding points remain
+      // in the image.aCoords property. Calling setCoords() updates aCoords.
+      originalImage.setCoords();
+    }
+
+    this.canvas.renderAll();
 
     let boundingRect = area.getBoundingRect();
     const transformedPoint = new Point(
       boundingRect.left,
       boundingRect.top
     ).transform(this.canvas.viewportTransform);
-    const transformedWidth = boundingRect.width * this.canvas.getZoom();
-    const transformedHeight = boundingRect.height * this.canvas.getZoom();
     boundingRect = new Rect({
       left: transformedPoint.x,
       top: transformedPoint.y,
-      width: transformedWidth,
-      height: transformedHeight,
+      width: boundingRect.width * this.canvas.getZoom(),
+      height: boundingRect.height * this.canvas.getZoom(),
     });
 
-    return this.canvas.toDataURL({
+    const snapshot = this.canvas.toDataURL({
       format: 'png',
       quality: 1,
       left: boundingRect.left,
@@ -872,6 +901,15 @@ class Strip {
       // so we need to scale it back to the original size
       multiplier: 1 / this.canvas.getZoom(),
     });
+
+    // Restore previous borders
+    if (originalImage) {
+      originalImage.strokeWidth = strokeWidth;
+    }
+
+    this.canvas.renderAll();
+
+    return snapshot;
   }
 
   async executeCrop(area) {
