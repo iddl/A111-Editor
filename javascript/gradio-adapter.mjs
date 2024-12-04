@@ -12,6 +12,7 @@ const selectors = {
     locationMobile: '#tab_txt2img',
     canvas: '#tab_txt2img .canvas_container',
     prompt: '#txt2img_prompt textarea',
+    negativePrompt: '#txt2img_neg_prompt textarea',
     gallery: '#txt2img_gallery',
     width: '#txt2img_width input[type=number]',
     height: '#txt2img_height input[type=number]',
@@ -24,6 +25,7 @@ const selectors = {
     locationMobile: '#tab_img2img',
     canvas: '#tab_img2img .canvas_container',
     prompt: '#img2img_prompt textarea',
+    negativePrompt: '#img2img_neg_prompt textarea',
     gallery: '#img2img_gallery',
     width: '#img2img_width input[type=number]',
     height: '#img2img_height input[type=number]',
@@ -78,21 +80,25 @@ async function urlToDataTransfer(url) {
   return dt;
 }
 
-async function usePrompt({ dataURL = null, skipFileUpload = false }) {
+async function usePrompt({ dataURL = null, mode = 'default' }) {
   let params = await getPrompt(dataURL);
   if (!params) {
     return;
   }
-  getElement('prompt').value = params;
 
-  if (skipFileUpload) {
-    return;
+  if (mode === 'default') {
+    getElement('prompt').value = params;
+    // this is a button that tells A1111 to read all params pasted in the positive prompt as a string of text
+    // e.g. "Steps: 26, Sampler: Euler a, Schedule type: Automatic, CFG scale: 7, Seed: 2197366867 ..."
+    // and set every toggle, slider, and input field to the values specified in the string
+    getElement('parseParamsButton').click();
+  } else if (mode === 'inpaint') {
+    // Using the default logic makes A1111 unfortunately reset the inpaint image
+    let [positivePrompt, negativePrompt, _] = params.split('\n');
+    negativePrompt = negativePrompt.replace('Negative Prompt: ', '');
+    getElement('prompt').value = positivePrompt;
+    getElement('negativePrompt').value = negativePrompt;
   }
-
-  // this is a button that tells A1111 to read all params pasted in the positive prompt as a string of text
-  // e.g. "Steps: 26, Sampler: Euler a, Schedule type: Automatic, CFG scale: 7, Seed: 2197366867 ..."
-  // and set every toggle, slider, and input field to the values specified in the string
-  getElement('parseParamsButton').click();
 }
 
 async function sendToSAM(dataURL) {
@@ -183,7 +189,7 @@ async function sendInpaint({
   // inpainting with the original prompt, model, seed and all
   // usually leads to better results
   if (originalImage) {
-    usePrompt({ dataURL: originalImage, skipFileUpload: true });
+    usePrompt({ dataURL: originalImage, mode: 'inpaint' });
   }
 
   // Dispatch a drop event on the target div
