@@ -94,39 +94,24 @@ class Menu {
       });
     }
 
-    if (src) {
-      actions.push({
-        name: 'Outpaint',
-        handler: () => {
-          app.addOutpaintArea(image);
-        },
-      });
-    }
+    actions.push({
+      name: 'Outpaint',
+      handler: () => {
+        app.addOutpaintArea(image);
+      },
+    });
 
-    if (image.clipPath) {
-      actions.push({
-        name: 'Uncrop',
-        handler: () => {
-          image.clipPath = null;
-          image.dirty = true;
-          // update the canvas
-          app.canvas.renderAll();
-          // re-render the menu, as the image might have changed
-          this.render(app);
-        },
-      });
-    } else {
-      actions.push({
-        name: 'Crop',
-        handler: () => {
-          app.addClipper(image);
-          // update the canvas
-          app.canvas.renderAll();
-          // re-render the menu, as the image might have changed
-          this.render(app);
-        },
-      });
-    }
+    actions.push({
+      name: 'Crop',
+      handler: () => {
+        app.addClipper(image);
+        // update the canvas
+        app.canvas.renderAll();
+        // re-render the menu, as the image might have changed
+        this.render(app);
+      },
+    });
+
     if (image.strokeWidth === 0) {
       actions.push({
         name: 'Add Border',

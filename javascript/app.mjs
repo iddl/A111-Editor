@@ -12,7 +12,7 @@ import {
 } from './lib-fabric.mjs'; // browser
 import { Menu } from './menu.mjs';
 import { debounce, sendInpaint } from './gradio-adapter.mjs';
-import { mergePrompts, setPrompt } from './prompt.mjs';
+import { mergePrompts, setPrompt, getPrompt } from './prompt.mjs';
 import { initNotifications } from './notifications.mjs';
 
 const logo =
@@ -631,40 +631,8 @@ class Strip {
       return;
     }
 
-    // remove the borders of the selector tool before getting the image
-    if (area.isInpaintSelector || area.isOutpaintArea) {
-      area.visible = false;
-      this.canvas.renderAll();
-    }
-
+    const dataURL = this.snapshotArea(area);
     let boundingRect = area.getBoundingRect();
-    const transformedPoint = new Point(
-      boundingRect.left,
-      boundingRect.top
-    ).transform(this.canvas.viewportTransform);
-    const transformedWidth = boundingRect.width * this.canvas.getZoom();
-    const transformedHeight = boundingRect.height * this.canvas.getZoom();
-    boundingRect = new Rect({
-      left: transformedPoint.x,
-      top: transformedPoint.y,
-      width: transformedWidth,
-      height: transformedHeight,
-    });
-
-    const width = boundingRect.width;
-    const height = boundingRect.height;
-
-    var dataURL = this.canvas.toDataURL({
-      format: 'png',
-      quality: 1,
-      left: boundingRect.left,
-      top: boundingRect.top,
-      width: boundingRect.width,
-      height: boundingRect.height,
-      // remember we're currently taking a picture of a potentially zoomed-out canvas
-      // so we need to scale it back to the original size
-      multiplier: 1 / this.canvas.getZoom(),
-    });
 
     let mask = null;
     if (detectEdges && alphaSrc) {
@@ -682,8 +650,8 @@ class Strip {
     sendInpaint({
       dataURL,
       // same comment about zoom as above
-      width: Math.ceil(width / this.canvas.getZoom()),
-      height: Math.ceil(height / this.canvas.getZoom()),
+      width: Math.ceil(boundingRect.width / this.canvas.getZoom()),
+      height: Math.ceil(boundingRect.height / this.canvas.getZoom()),
       mask,
       // used to copy the prompt to help with inpainting
       originalImage: originalImage,
@@ -840,6 +808,12 @@ class Strip {
       };
     }
 
+    r.controls.tr.setVisibility(false);
+    r.controls.tl.setVisibility(false);
+    r.controls.bl.setVisibility(false);
+    r.controls.br.setVisibility(false);
+    r.controls.mtr.setVisibility(false);
+
     r.controls.deleteControl = new Control({
       x: 0.5,
       y: -0.5,
@@ -866,30 +840,68 @@ class Strip {
     this.canvas.add(r);
   }
 
-  executeCrop(clipper) {
-    const image = clipper.imageRef;
-    const imgMatrix = image.calcOwnMatrix();
-    const clipperMatrix = clipper.calcOwnMatrix();
+  snapshotArea(area) {
+    // remove the borders of the selector tool before getting the image
+    if (area.noPersistence) {
+      area.visible = false;
+      this.canvas.renderAll();
+    }
 
-    const clipperBoundingRect = clipper.getBoundingRect();
-    const width = clipperBoundingRect.width;
-    const height = clipperBoundingRect.height;
-    const top = clipperMatrix[5] - imgMatrix[5];
-    const left = clipperMatrix[4] - imgMatrix[4];
-
-    image.set({
-      clipPath: new Rect({
-        width: width,
-        height: height,
-        top: top,
-        left: left,
-        originX: 'center',
-        originY: 'center',
-      }),
+    let boundingRect = area.getBoundingRect();
+    const transformedPoint = new Point(
+      boundingRect.left,
+      boundingRect.top
+    ).transform(this.canvas.viewportTransform);
+    const transformedWidth = boundingRect.width * this.canvas.getZoom();
+    const transformedHeight = boundingRect.height * this.canvas.getZoom();
+    boundingRect = new Rect({
+      left: transformedPoint.x,
+      top: transformedPoint.y,
+      width: transformedWidth,
+      height: transformedHeight,
     });
 
-    this.canvas.remove(clipper);
-    this.canvas.renderAll();
+    return this.canvas.toDataURL({
+      format: 'png',
+      quality: 1,
+      left: boundingRect.left,
+      top: boundingRect.top,
+      width: boundingRect.width,
+      height: boundingRect.height,
+      // remember we're currently taking a picture of a potentially zoomed-out canvas
+      // so we need to scale it back to the original size
+      multiplier: 1 / this.canvas.getZoom(),
+    });
+  }
+
+  async executeCrop(area) {
+    if (!area || !area.isClipper) {
+      return;
+    }
+
+    let clippedImage = this.snapshotArea(area);
+
+    // the new clipped image will retain the prompt of the original image
+    const original = area.imageRef;
+    const prompt = await getPrompt(original.getSrc());
+    clippedImage = await setPrompt(clippedImage, prompt);
+
+    const img = new Image();
+    img.onload = () => {
+      const fabricImg = new FabricImage(img, {
+        top: area.top,
+        left: area.left,
+      });
+      this.canvas.add(fabricImg);
+
+      // remove both the clipper and the parent
+      this.canvas.remove(area);
+      this.canvas.remove(original);
+
+      this.canvas.setActiveObject(fabricImg);
+      this.canvas.renderAll();
+    };
+    img.src = clippedImage;
   }
 }
 
