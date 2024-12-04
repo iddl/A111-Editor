@@ -8,6 +8,7 @@ import {
   Text,
   Control,
   util as fabricUtil,
+  controlsUtils as controlUtils,
 } from './lib-fabric.mjs'; // browser
 import { Menu } from './menu.mjs';
 import { debounce, sendInpaint } from './gradio-adapter.mjs';
@@ -747,6 +748,8 @@ class Strip {
   }
 
   addOutpaintArea(image) {
+    // Most models can handle 1 megapixel images, so we'll limit the size
+    // for larger areas, you can still do the outpaint in chunks, if you need to.
     const maxSize = 1500;
 
     const center = image.getCenterPoint();
@@ -774,37 +777,32 @@ class Strip {
     r.controls.br.setVisibility(false);
     r.controls.mtr.setVisibility(false);
 
-    // r.on('scaling', () => {
-    //   if (r.scaleX < 0) {
-    //     r.scaleX = 0;
-    //   }
-    //   if (r.scaleY < 0) {
-    //     r.scaleY = 0;
-    //   }
-
-    //   if (r.width * r.scaleX > maxSize) {
-    //     r.scaleX = maxSize / r.width;
-    //   }
-    //   if (r.height * r.scaleY > maxSize) {
-    //     r.scaleY = maxSize / r.height;
-    //   }
-    // });
-
-    // Make sure the crop area doesn't go outside the image
-    // it's still fragile, corners don't respect this rule
-    // and you can still move the image underneath, but it's a start
-    for (const control of [r.controls.mr, r.controls.ml]) {
+    for (const control of [
+      r.controls.mr,
+      r.controls.ml,
+      r.controls.mt,
+      r.controls.mb,
+    ]) {
       const originalHandler = control.actionHandler;
       control.actionHandler = (eventData, transform, x, y) => {
-        console.log(transform.scaleX);
-        const newWidth = transform.target.width * transform.target.scaleX;
-        if (newWidth >= maxSize) {
-          transform.target.scaleX = maxSize / transform.target.width;
-          return true;
+        const localPoint = controlUtils.getLocalPoint(
+          transform,
+          transform.originX,
+          transform.originY,
+          x,
+          y
+        );
+        if (transform.action === 'scaleX' && Math.abs(localPoint.x) > maxSize) {
+          return false;
+        }
+        if (transform.action === 'scaleY' && Math.abs(localPoint.y) > maxSize) {
+          return false;
         }
         return originalHandler(eventData, transform, x, y);
       };
     }
+
+    // TODO, high denoising
 
     this.canvas.add(r);
     // make sure we're manipulating the outpaint area now
