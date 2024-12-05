@@ -645,9 +645,8 @@ class Strip {
 
     sendInpaint({
       dataURL,
-      // same comment about zoom as above
-      width: Math.ceil(boundingRect.width / this.canvas.getZoom()),
-      height: Math.ceil(boundingRect.height / this.canvas.getZoom()),
+      width: Math.floor(boundingRect.width),
+      height: Math.floor(boundingRect.height),
       mask,
       // used to copy the prompt to help with inpainting
       originalImage: area instanceof FabricImage ? area.getSrc() : null,
