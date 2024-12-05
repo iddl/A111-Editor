@@ -88,6 +88,8 @@ async function usePrompt({ dataURL = null, mode = 'default' }) {
 
   if (mode === 'default') {
     getElement('prompt').value = params;
+    // gradio will refuse to process the prompt if we don't trigger an input event on the textbox
+    getElement('prompt').dispatchEvent(new Event('input'));
     // this is a button that tells A1111 to read all params pasted in the positive prompt as a string of text
     // e.g. "Steps: 26, Sampler: Euler a, Schedule type: Automatic, CFG scale: 7, Seed: 2197366867 ..."
     // and set every toggle, slider, and input field to the values specified in the string
