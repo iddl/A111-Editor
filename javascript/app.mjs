@@ -480,7 +480,7 @@ class Strip {
     });
   }
 
-  attachImage({ img, isLivePreview = false }) {
+  async attachImage({ img, isLivePreview = false }) {
     // this is a neat attribute that is saved to show "Blend with background" options
     let hasTransparency = false;
     // don't bother assessing transparency if we're casting live previews
@@ -515,9 +515,20 @@ class Strip {
       hasTransparency,
     };
     const selected = this.canvas.getActiveObject();
+    let originalPrompt = null;
     if (selected) {
       attributes.top = selected.top;
       attributes.left = selected.left;
+      originalPrompt = await getPrompt(selected.getSrc());
+    }
+
+    // This is a preliminary step towards a more robust system with improved anchoring points
+    // to determine what is being edited. Currently, it addresses a limitation in the output
+    // of segment-anything where edited png files forget prompts from their precursors.
+    const newPrompt = await getPrompt(img.src);
+    if (!newPrompt && originalPrompt) {
+      console.log('Prompt not found for image, using previous prompt');
+      img.src = await setPrompt(img.src, originalPrompt);
     }
 
     // clear up old previews
