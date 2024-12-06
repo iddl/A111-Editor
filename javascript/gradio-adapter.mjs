@@ -1,5 +1,5 @@
 import { spawnNotification } from './notifications.mjs';
-import { getPrompt } from './prompt.mjs';
+import { getPrompt, parsePrompt } from './prompt.mjs';
 
 /*
  * Basic page utils
@@ -96,10 +96,9 @@ async function usePrompt({ dataURL = null, mode = 'default' }) {
     getElement('parseParamsButton').click();
   } else if (mode === 'inpaint') {
     // Using the default logic makes A1111 unfortunately reset the inpaint image
-    let [positivePrompt, negativePrompt, _] = params.split('\n');
-    negativePrompt = negativePrompt.replace('Negative Prompt: ', '');
-    getElement('prompt').value = positivePrompt;
-    getElement('negativePrompt').value = negativePrompt;
+    params = parsePrompt(params);
+    getElement('prompt').value = params.prompt;
+    getElement('negativePrompt').value = params.negativePrompt;
   }
 }
 
