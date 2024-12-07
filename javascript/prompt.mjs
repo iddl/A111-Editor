@@ -14,7 +14,7 @@ async function getPrompt(src) {
 
   const exifData = await Exifr.parse(dataUri);
 
-  return exifData?.parameters;
+  return exifData?.parameters ? exifData.parameters : null;
 }
 
 async function setPrompt(dataURI, prompt) {

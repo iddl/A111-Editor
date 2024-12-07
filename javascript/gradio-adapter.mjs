@@ -56,19 +56,6 @@ function getElement(name, tab = null) {
   return gradioApp().querySelector(selectors[tab][name]);
 }
 
-/*
- * Actions
- */
-
-function setDimensionSliders(width, height, tab = null) {
-  let wInput = getElement('width', tab);
-  let hInput = getElement('height', tab);
-  wInput.value = width;
-  hInput.value = height;
-  updateInput(wInput);
-  updateInput(hInput);
-}
-
 async function urlToDataTransfer(url) {
   // We still have a mix of actual urls and dataURLs (raw base64 data)
   // in the mix. Fetch works for either case.
@@ -96,9 +83,30 @@ async function usePrompt({ dataURL = null, mode = 'default' }) {
     getElement('parseParamsButton').click();
   } else if (mode === 'inpaint') {
     // Using the default logic makes A1111 unfortunately reset the inpaint image
-    params = parsePrompt(params);
-    getElement('prompt').value = params.prompt;
-    getElement('negativePrompt').value = params.negativePrompt;
+    const { prompt, negativePrompt } = parsePrompt(params);
+    applyParams({ prompt, negativePrompt }, 'inpaint');
+  }
+}
+
+function applyParams(params, tab = null) {
+  if (params.prompt) {
+    getElement('prompt', tab).value = params.prompt;
+  }
+
+  if (params.negativePrompt) {
+    getElement('negativePrompt', tab).value = params.negativePrompt;
+  }
+
+  if (params.width) {
+    const wInput = getElement('width', tab);
+    wInput.value = params.width;
+    updateInput(wInput);
+  }
+
+  if (params.height) {
+    const hInput = getElement('height', tab);
+    hInput.value = params.height;
+    updateInput(hInput);
   }
 }
 
@@ -184,7 +192,7 @@ async function sendInpaint({
     switch_to_img2img_tab(2);
     fileDropDOM = fileDropLocations.inpaint;
   }
-  setDimensionSliders(width, height, 'inpaint');
+  applyParams({ width, height }, 'inpaint');
 
   // See if we're inpainting an image that had a prompt,
   // inpainting with the original prompt, model, seed and all
@@ -249,4 +257,5 @@ export {
   getTab,
   getElement,
   generateImage,
+  applyParams,
 };

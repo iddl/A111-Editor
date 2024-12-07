@@ -1,6 +1,13 @@
 import { FabricImage, Rect, Group } from './lib-fabric.mjs';
-import { sendTxt2Img, sendToSAM, generateImage } from './gradio-adapter.mjs';
+import {
+  sendTxt2Img,
+  sendToSAM,
+  generateImage,
+  applyParams,
+} from './gradio-adapter.mjs';
 import { editInPhotopea } from './photopea.mjs';
+import { getPrompt, parsePrompt } from './prompt.mjs';
+import { parse } from './lib-exifr.mjs';
 
 const copyIcon = `<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" style="margin-right: 7px" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
 const cutIcon = `<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" style="margin-right: 7px" fill="none" stroke-linecap="round" stroke-linejoin="round" class="css-i6dzq1"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>`;
@@ -13,6 +20,7 @@ class Menu {
     container.innerHTML = `<ul></ul>`;
     this.container = container.querySelector('ul');
     this.ctxMenu = new ContextMenu();
+    this.promptMenu = new PromptMenu();
   }
 
   renderFileMenu({ selection = null, app }) {
@@ -51,9 +59,9 @@ class Menu {
 
     if (src) {
       actions.push({
-        name: 'Use Prompt',
-        handler: () => {
-          sendTxt2Img({ dataURL: src });
+        name: 'Prompt',
+        handler: (target) => {
+          this.promptMenu.render(target, image);
         },
       });
     }
@@ -231,7 +239,6 @@ class Menu {
 
 class ContextMenu {
   constructor() {
-    this.menuItems = [];
     this.mode = 'dark';
     this.target = null;
     document.addEventListener('click', (event) => {
@@ -244,27 +251,7 @@ class ContextMenu {
     });
   }
 
-  getMenuItemsNode() {
-    const nodes = [];
-
-    if (!this.menuItems) {
-      console.error('getMenuItemsNode :: Please enter menu items');
-      return [];
-    }
-
-    this.menuItems.forEach((data, index) => {
-      const item = this.createItemMarkup(data);
-      item.firstChild.setAttribute(
-        'style',
-        `animation-delay: ${index * 0.08}s`
-      );
-      nodes.push(item);
-    });
-
-    return nodes;
-  }
-
-  createItemMarkup(data) {
+  renderButton(data, index) {
     const button = document.createElement('BUTTON');
     const item = document.createElement('LI');
 
@@ -279,17 +266,25 @@ class ContextMenu {
       button.addEventListener('click', data.handler);
     }
 
+    item.firstChild.setAttribute('style', `animation-delay: ${index * 0.08}s`);
+
     return item;
   }
 
-  renderMenu() {
+  async renderContent(items) {
     const menuContainer = document.createElement('UL');
 
     menuContainer.classList.add('contextMenu');
-    menuContainer.setAttribute('data-theme', this.mode);
 
-    this.getMenuItemsNode().forEach((item) => menuContainer.appendChild(item));
+    if (!items) {
+      return [];
+    }
 
+    items = items.map(this.renderButton);
+
+    items.forEach((item) => {
+      menuContainer.appendChild(item);
+    });
     return menuContainer;
   }
 
@@ -301,12 +296,11 @@ class ContextMenu {
     this.contextMenu = null;
   }
 
-  render(target, items) {
+  async render(target, data) {
     this.clearMenu();
-    this.menuItems = items;
     this.target = target;
 
-    const contextMenu = this.renderMenu();
+    const contextMenu = await this.renderContent(data);
     this.contextMenu = contextMenu;
 
     document.body.appendChild(contextMenu);
@@ -317,11 +311,132 @@ class ContextMenu {
 
     contextMenu.setAttribute(
       'style',
-      `--width: ${contextMenu.scrollWidth}px;
-            --height: ${contextMenu.scrollHeight}px;
-            --top: ${positionY}px;
-            --left: ${positionX}px;`
+      `--top: ${positionY}px;
+      --left: ${positionX}px;`
     );
+  }
+}
+
+class PromptMenu extends ContextMenu {
+  renderPromptParam({
+    label,
+    content,
+    copy = false,
+    apply = false,
+    applyHandler = null,
+  }) {
+    const container = document.createElement('li');
+    container.classList.add('prompt-section');
+
+    const labelElement = document.createElement('span');
+    labelElement.textContent = label;
+    labelElement.classList.add('prompt-label');
+
+    const contentElement = document.createElement('span');
+    contentElement.textContent = content;
+    contentElement.classList.add('prompt-content');
+
+    container.appendChild(labelElement);
+    container.appendChild(contentElement);
+
+    if (copy) {
+      let copyButton = document.createElement('button');
+      copyButton.innerHTML = 'Copy';
+      copyButton.classList.add('copy-button');
+      copyButton.addEventListener('click', () => {
+        navigator.clipboard.writeText(content);
+      });
+      container.appendChild(copyButton);
+    }
+
+    if (apply) {
+      let applyButton = document.createElement('button');
+      applyButton.innerHTML = 'Apply';
+      applyButton.classList.add('copy-button');
+      applyButton.addEventListener('click', applyHandler);
+      container.appendChild(applyButton);
+    }
+
+    return container;
+  }
+
+  async renderContent(item) {
+    const container = document.createElement('ul');
+    container.classList.add('contextMenu');
+    container.classList.add('prompt-container');
+
+    if (!(item instanceof FabricImage)) {
+      return;
+    }
+
+    const src = item.getSrc();
+    const paramString = await getPrompt(src);
+    const promptAvailable = paramString !== null;
+    const params = parsePrompt(paramString);
+    let sections = [];
+
+    /*
+     * Part 1: Display the prompt parameters. Bits and pieces can be copied to clipboard or directly applied.
+     */
+    if (promptAvailable) {
+      sections = sections.concat(
+        [
+          { label: 'Prompt', content: params.prompt, copy: true },
+          {
+            label: 'Negative Prompt',
+            content: params.negativePrompt,
+            copy: true,
+          },
+        ].map(this.renderPromptParam)
+      );
+    }
+
+    /*
+     * Part 2: Display the image size.
+     * This gets shown irrespective of whether the prompt is available or not because it's always useful.
+     */
+    sections.push(
+      this.renderPromptParam({
+        // It's bit tricky here: We are displaying the current image size instead of the original size used for generation.
+        // This is because users are more likely to want to copy or apply the current size to the image.
+        label: 'Size',
+        content: `${item.width}x${item.height}`,
+        apply: true,
+        applyHandler: () => {
+          applyParams({ width: item.width, height: item.height });
+        },
+      })
+    );
+
+    /*
+     * Part 3: Display the actions that can be taken with the prompt
+     */
+    if (promptAvailable) {
+      // Actions that can be taken with the prompt
+      sections = sections.concat(
+        [
+          {
+            content: 'Copy all parameters (including seed, sampler, etc.)',
+            divider: 'top',
+            handler: () => {
+              navigator.clipboard.writeText(paramString);
+            },
+          },
+          {
+            content: 'Apply all parameters',
+            handler: () => {
+              sendTxt2Img({ dataURL: src });
+            },
+          },
+        ].map(this.renderButton)
+      );
+    }
+
+    sections.forEach((section) => {
+      container.appendChild(section);
+    });
+
+    return container;
   }
 }
 
