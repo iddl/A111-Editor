@@ -1,8 +1,19 @@
+import { getPrompt, setPrompt } from './prompt.mjs';
+
 let modal;
 let iframe;
 
 // helps us track what image is being edited
 let currentSelection = null;
+
+async function readAsDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 async function init(app) {
   modal = document.createElement('div');
@@ -74,16 +85,15 @@ async function init(app) {
   await initialized;
 }
 
-function saveImage(arraybuffer, app) {
+async function saveImage(arraybuffer, app) {
   const blob = new Blob([arraybuffer], { type: 'image/png' });
-  const reader = new FileReader();
-  reader.onloadend = () => {
-    currentSelection.setSrc(reader.result).then(() => {
-      app.canvas.renderAll();
-    });
-  };
-  reader.readAsDataURL(blob);
-
+  let dataURL = await readAsDataURL(blob);
+  // retain the original prompt
+  const originalPrompt = await getPrompt(currentSelection.getSrc());
+  dataURL = await setPrompt(dataURL, originalPrompt);
+  currentSelection.setSrc(dataURL).then(() => {
+    app.canvas.renderAll();
+  });
   closeModal();
 }
 
