@@ -1,6 +1,6 @@
 import { FabricImage, Rect, Group } from './lib-fabric.mjs';
 import {
-  sendTxt2Img,
+  usePrompt,
   sendToSAM,
   generateImage,
   applyParams,
@@ -425,7 +425,7 @@ class PromptMenu extends ContextMenu {
           {
             content: 'Apply all parameters',
             handler: () => {
-              sendTxt2Img({ dataURL: src });
+              usePrompt({ dataURL: src });
             },
           },
         ].map(this.renderButton)

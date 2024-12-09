@@ -67,25 +67,45 @@ async function urlToDataTransfer(url) {
   return dt;
 }
 
-async function usePrompt({ dataURL = null, mode = 'default' }) {
+async function usePrompt({ dataURL = null }) {
   let params = await getPrompt(dataURL);
   if (!params) {
     return;
   }
 
-  if (mode === 'default') {
-    getElement('prompt').value = params;
-    // gradio will refuse to process the prompt if we don't trigger an input event on the textbox
-    getElement('prompt').dispatchEvent(new Event('input'));
-    // this is a button that tells A1111 to read all params pasted in the positive prompt as a string of text
-    // e.g. "Steps: 26, Sampler: Euler a, Schedule type: Automatic, CFG scale: 7, Seed: 2197366867 ..."
-    // and set every toggle, slider, and input field to the values specified in the string
-    getElement('parseParamsButton').click();
-  } else if (mode === 'inpaint') {
-    // Using the default logic makes A1111 unfortunately reset the inpaint image
-    const { prompt, negativePrompt } = parsePrompt(params);
-    applyParams({ prompt, negativePrompt }, 'inpaint');
-  }
+  const container = getElement('prompt');
+  container.value = params;
+  // gradio will refuse to process the prompt if we don't trigger an input event on the textbox
+  container.dispatchEvent(new Event('input'));
+
+  // This is a button that tells A1111 backend to read all params pasted in the positive prompt as a string of text
+  // e.g. "Steps: 26, Sampler: Euler a, Schedule type: Automatic, CFG scale: 7, Seed: 2197366867 ..."
+  // and set every toggle, slider, and input field to the values specified in the string.
+  // We have some code in the frontend to parse all of this, however, we're still limiting the scope of that to only prompt, negative prompt, width, and height.
+  const parseButton = getElement('parseParamsButton');
+
+  // Before we click the button, we need to  stop a line in the backend from changing tab (see below).
+  // https://github.com/lllyasviel/stable-diffusion-webui-forge/blob/9a698e26d6744de24d05568c9938a52694dbb3f0/modules/infotext_utils.py#L190
+  const switchTabs = window.switch_to_img2img;
+  window.switch_to_img2img = () => {};
+
+  // Click the parse button
+  parseButton.click();
+
+  const startTime = Date.now();
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(() => {
+      if (container.value !== params) {
+        clearInterval(interval);
+        window.switch_to_img2img = switchTabs;
+        resolve();
+      } else if (Date.now() - startTime > 2500) {
+        clearInterval(interval);
+        window.switch_to_img2img = switchTabs;
+        reject(new Error('Failed to update prompt within 2.5 seconds'));
+      }
+    }, 100);
+  });
 }
 
 function applyParams(params, tab = null) {
@@ -192,13 +212,13 @@ async function sendInpaint({
     switch_to_img2img_tab(2);
     fileDropDOM = fileDropLocations.inpaint;
   }
-  applyParams({ width, height }, 'inpaint');
 
   // See if we're inpainting an image that had a prompt,
   // inpainting with the original prompt, model, seed and all
   // usually leads to better results
+  // Note: Prompt parsing will reset width and height.
   if (originalImage) {
-    usePrompt({ dataURL: originalImage, mode: 'inpaint' });
+    await usePrompt({ dataURL: originalImage, mode: 'inpaint' });
   }
 
   // Dispatch a drop event on the target div
@@ -209,6 +229,9 @@ async function sendInpaint({
     dataTransfer: dataTransfer,
   });
   document.querySelector(fileDropDOM).dispatchEvent(dropEvent);
+
+  // Make sure we use the width and height of the image we have uploaded
+  applyParams({ width, height }, 'inpaint');
 
   if (!mask) {
     return;
@@ -251,7 +274,7 @@ function generateImage() {
 
 export {
   sendInpaint,
-  usePrompt as sendTxt2Img,
+  usePrompt,
   sendToSAM,
   debounce,
   getTab,
