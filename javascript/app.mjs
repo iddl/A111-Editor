@@ -431,7 +431,13 @@ class Strip {
           items[i].getAsString((url) => {
             const img = new Image();
             img.onload = () => {
-              this.attachImage({ img });
+              const location = this.canvas.getScenePoint(e);
+              this.attachImage({
+                img,
+                // Adjust the image position to ensure it slightly overlaps with the pointer
+                // by subtracting 100 from both x and y coordinates
+                location: { x: location.x - 100, y: location.y - 100 },
+              });
             };
             img.src = url;
           });
@@ -480,7 +486,11 @@ class Strip {
     });
   }
 
-  async attachImage({ img, isLivePreview = false }) {
+  async attachImage({
+    img,
+    isLivePreview = false,
+    location = 'overlapSelected', // can be 'overlapSelected', 'topleft', or { x, y }
+  }) {
     // this is a neat attribute that is saved to show "Blend with background" options
     let hasTransparency = false;
     // don't bother assessing transparency if we're casting live previews
@@ -504,21 +514,47 @@ class Strip {
       tempCanvas.remove();
     }
 
+    const selected = this.canvas.getActiveObject();
+
+    let placement = null;
+    if (location === 'overlapSelected' && selected) {
+      // the default case, when we're dropping an image on top of another
+      // it's the most common case when generating images
+      placement = { top: selected.top, left: selected.left };
+    } else if (typeof location === 'object') {
+      // this is used for drag and drop, we want to drop the image exactly where the pointer is
+      placement = {
+        top: location.y,
+        left: location.x,
+      };
+    } else if (location === 'topleft' || !selected) {
+      // Or if nothing is selected, place the image at the top left of the canvas.
+      // This case is intended for ctrl+v, but copying other FabricImage attributes is also needed,
+      // so we'll leave that for another day.
+      const zoom = this.canvas.getZoom();
+      placement = {
+        top: -this.canvas.viewportTransform[5] / zoom,
+        left: -this.canvas.viewportTransform[4] / zoom,
+      };
+    }
+
+    if (!placement) {
+      throw new Error('No placement specified for the image');
+    }
+
     let attributes = {
       // pick the top left based on panning
-      top: -this.canvas.viewportTransform[5] / this.canvas.getZoom(),
-      left: -this.canvas.viewportTransform[4] / this.canvas.getZoom(),
+      top: placement.top,
+      left: placement.left,
       // image with transparency should not have borders
       strokeWidth: hasTransparency ? 0 : 2,
       stroke: '#222',
       isLivePreview,
       hasTransparency,
     };
-    const selected = this.canvas.getActiveObject();
+
     let originalPrompt = null;
     if (selected) {
-      attributes.top = selected.top;
-      attributes.left = selected.left;
       originalPrompt = await getPrompt(selected.getSrc());
     }
 
