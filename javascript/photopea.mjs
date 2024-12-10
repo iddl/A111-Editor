@@ -3,6 +3,12 @@ import { getPrompt, setPrompt } from './prompt.mjs';
 let modal;
 let iframe;
 
+const CLOSE_ACTIVE_EDITS = `var documents = app.documents;
+  for (var i = documents.length - 1; i >= 0; i--) {
+    documents[i].close(SaveOptions.DONOTSAVECHANGES);
+  };`;
+const HIDE_BACKGROUND_LAYER_SCRIPT = `app.documents[0].layers[1].visible = false;`;
+
 // helps us track what image is being edited
 let currentSelection = null;
 
@@ -12,6 +18,26 @@ async function readAsDataURL(blob) {
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(blob);
+  });
+}
+
+async function runScript(message) {
+  return new Promise((resolve) => {
+    function onMessage(e) {
+      if (e.source !== iframe.contentWindow) {
+        return;
+      }
+      if (e.data === 'done') {
+        window.removeEventListener('message', onMessage);
+        // This is super ugly, but it seems like Photopea is not really done when it replies with 'done'..
+        // Or we're doing something else wrong. Either way, needs to be fixed, it's basically a race condition monster.
+        setTimeout(() => {
+          resolve();
+        }, 50);
+      }
+    }
+    window.addEventListener('message', onMessage);
+    iframe.contentWindow.postMessage(message, '*');
   });
 }
 
@@ -41,7 +67,9 @@ async function init(app) {
   const env = {
     environment: {
       vmode: 0,
-      customIO: { save: 'app.activeDocument.saveToOE("png")' },
+      customIO: {
+        save: `app.activeDocument.saveToOE("png");${CLOSE_ACTIVE_EDITS}`,
+      },
       localsave: false,
       plugins: [],
     },
@@ -55,34 +83,22 @@ async function init(app) {
   iframe.style.width = '100%';
   iframe.style.height = '100%';
   iframe.style.border = 'none';
-  modal.appendChild(iframe);
 
-  // Wait for photopea to send us a 'done' message to signal it's initialized
-  let count = 0;
-  let initialized = new Promise((resolve) => {
-    function onMessage(e) {
-      // Discard non-photopea messages
-      if (e.source !== iframe.contentWindow) {
-        return;
-      }
-
-      // There is a tricky bit that photopea sends a 'done' message
-      // after an image is loaded, so we need to make sure we only
-      // the first one is handled
-      if (e.data == 'done' && count == 0) {
-        resolve();
-      }
-
-      // this is the output of a save operation from photopea
-      if (e.data instanceof ArrayBuffer) {
-        saveImage(e.data, app);
-      }
-
-      count++;
+  window.addEventListener('message', (e) => {
+    // Discard non-Photopea messages
+    if (e.source !== iframe.contentWindow) {
+      return;
     }
-    window.addEventListener('message', onMessage);
+
+    // this is the output of a save operation from photopea
+    if (e.data instanceof ArrayBuffer) {
+      saveImage(e.data, app);
+    }
   });
-  await initialized;
+
+  // Wait for Photopea to send us a 'done' message to signal it's initialized
+  modal.appendChild(iframe);
+  await runScript('');
 }
 
 async function saveImage(arraybuffer, app) {
@@ -105,14 +121,22 @@ async function editInPhotopea(fabricImage, app) {
 
   modal.style.display = 'block';
 
-  let src = fabricImage.toDataURL();
-  iframe.contentWindow.postMessage(`app.open("${src}", false, true);`, '*');
+  let foreground = fabricImage.toDataURL();
+  let background = app.snapshotArea({
+    area: fabricImage,
+    mode: 'background',
+  });
+
+  await runScript(`app.open("${background}", false, true);`);
+  await runScript(`app.open("${foreground}", false, true);`);
+  await runScript(HIDE_BACKGROUND_LAYER_SCRIPT);
 }
 
 function closeModal() {
   if (modal) {
     modal.style.display = 'none';
   }
+  runScript(CLOSE_ACTIVE_EDITS);
 }
 
 export { editInPhotopea };

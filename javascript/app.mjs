@@ -646,7 +646,7 @@ class Strip {
       return;
     }
 
-    const dataURL = this.snapshotArea(area);
+    const dataURL = this.snapshotArea({ area });
     let boundingRect = area.getBoundingRect();
 
     let mask = null;
@@ -784,7 +784,7 @@ class Strip {
     this.canvas.add(r);
   }
 
-  snapshotArea(area) {
+  snapshotArea({ area, mode = 'default' }) {
     // remove the borders of the selector tool before getting the image
     if (area.noPersistence) {
       area.visible = false;
@@ -808,6 +808,13 @@ class Strip {
       // which changes after removing the border. The old bounding points remain
       // in the image.aCoords property. Calling setCoords() updates aCoords.
       originalImage.setCoords();
+    }
+
+    // In background mode, we capture the background of the specified area.
+    // This is currently used in Photopea to provide a separate layer as the background.
+    // Capturing the background is especially useful when merging different layers.
+    if (mode === 'background') {
+      originalImage.visible = false;
     }
 
     this.canvas.renderAll();
@@ -839,6 +846,8 @@ class Strip {
     // Restore previous borders
     if (originalImage) {
       originalImage.strokeWidth = strokeWidth;
+      // In 'background' mode, the original image can get hidden.
+      originalImage.visible = true;
     }
 
     this.canvas.renderAll();
@@ -851,7 +860,7 @@ class Strip {
       return;
     }
 
-    let clippedImage = this.snapshotArea(area);
+    let clippedImage = this.snapshotArea({ area });
 
     // the new clipped image will retain the prompt of the original image
     const original = area.imageRef;
