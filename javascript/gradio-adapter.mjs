@@ -29,6 +29,7 @@ const selectors = {
     gallery: '#img2img_gallery',
     width: '#img2img_width input[type=number]',
     height: '#img2img_height input[type=number]',
+    denoisingStrength: '#img2img_denoising_strength input[type=number]',
     workspaceContainer: '#img2img_extra_tabs .resize-handle-row',
     // yes, A1111 has multiple buttons with the same id
     parseParamsButton: '#img2img_tools #paste',
@@ -128,6 +129,12 @@ function applyParams(params, tab = null) {
     hInput.value = params.height;
     updateInput(hInput);
   }
+
+  if (params['Denoising strength']) {
+    const denoisingInput = getElement('denoisingStrength', tab);
+    denoisingInput.value = params['Denoising strength'];
+    updateInput(denoisingInput);
+  }
 }
 
 async function sendToSAM(dataURL) {
@@ -183,8 +190,7 @@ async function sendToSAM(dataURL) {
 
 async function sendInpaint({
   dataURL,
-  width,
-  height,
+  params = { width: 0, height: 0 },
   mask = null,
   originalImage = null,
 }) {
@@ -231,7 +237,8 @@ async function sendInpaint({
   document.querySelector(fileDropDOM).dispatchEvent(dropEvent);
 
   // Make sure we use the width and height of the image we have uploaded
-  applyParams({ width, height }, 'inpaint');
+  // This also sets denoising strength if passed
+  applyParams(params, 'inpaint');
 
   if (!mask) {
     return;

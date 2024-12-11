@@ -677,7 +677,7 @@ class Strip {
     this.canvas.renderAll();
   }
 
-  async inpaint({ area = null, detectEdges = false, alphaSrc = null }) {
+  async inpaint({ area = null, mode = 'default', alphaSrc = null }) {
     if (!area) {
       return;
     }
@@ -685,18 +685,25 @@ class Strip {
     const dataURL = this.snapshotArea({ area });
     let boundingRect = area.getBoundingRect();
 
+    let params = {
+      width: Math.floor(boundingRect.width),
+      height: Math.floor(boundingRect.height),
+    };
+
     let mask = null;
-    if (detectEdges && alphaSrc) {
-      mask = await this.getEdgeMask(alphaSrc);
+    if (mode === 'blendWithBackground') {
+      // this is a light img2img pass that excludes the background,
+      // that's why we want to use the mask
+      mask = await this.getMask(alphaSrc);
+      params['Denoising strength'] = 0.1;
     }
 
     sendInpaint({
       dataURL,
-      width: Math.floor(boundingRect.width),
-      height: Math.floor(boundingRect.height),
       mask,
       // used to copy the prompt to help with inpainting
       originalImage: area instanceof FabricImage ? area.getSrc() : null,
+      params,
     });
 
     // readjust the borders of the selector tool
@@ -706,7 +713,7 @@ class Strip {
     }
   }
 
-  async getEdgeMask(src) {
+  async getMask(src) {
     const res = await fetch(src);
     let blob = await res.blob();
 

@@ -1,39 +1,26 @@
-import cv2
 import io
-
 from PIL import Image
-import numpy as np
 from pydantic import BaseModel, Field
 from fastapi import UploadFile
 from fastapi.responses import Response
 from modules import script_callbacks
 
 
-def create_mask_outline(image):
-    # # Convert the PIL image to grayscale
-    img = image.convert("L")
-
-    # Convert the PIL image to RGBA
-    img_rgba = image.convert("RGBA")
-
-    # Extract the alpha channel from the RGBA image
-    alpha_channel = img_rgba.split()[-1]
-
-    # Convert the alpha channel to a binary image (black and white)
-    _, thresh = cv2.threshold(np.array(alpha_channel), 0, 255, cv2.THRESH_BINARY)
-
-    # Find contours (outlines) in the binary image
-    contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Create a blank image for the outline
-    outline = np.zeros_like(np.array(img))
-
-    # Draw the contours on the outline image
-    cv2.drawContours(outline, contours, -1, (255, 255, 255), 2) # White outline, thickness 2
-
-    # Convert the outline to a PIL Image and save as PNG with transparency
-    outline_pil = Image.fromarray(outline)
-    return outline_pil
+def create_alpha_mask(image):
+    image = image.convert("RGBA")
+    # Extract the alpha channel
+    alpha = image.split()[-1]
+    # Create a new image with the same size as the original
+    mask = Image.new("RGB", image.size, (0, 0, 0))
+    # Get the pixel data
+    mask_data = mask.load()
+    alpha_data = alpha.load()
+    # Iterate over each pixel
+    for y in range(image.size[1]):
+        for x in range(image.size[0]):
+            if alpha_data[x, y] != 0:
+                mask_data[x, y] = (255, 255, 255)
+    return mask
 
 class MaskResponse(BaseModel):
     rand: int = Field(title="Random integer")
@@ -42,7 +29,7 @@ def get_mask(image: UploadFile):
 
     # Convert the uploaded image to a PIL Image
     pil_image = Image.open(image.file)
-    outline = create_mask_outline(pil_image)
+    outline = create_alpha_mask(pil_image)
     img_byte_arr = io.BytesIO()
     outline.save(img_byte_arr, format='PNG')
 

@@ -79,7 +79,11 @@ class Menu {
       actions.push({
         name: 'Blend with background',
         handler: () => {
-          app.inpaint({ area: image, detectEdges: true, alphaSrc: src });
+          app.inpaint({
+            area: image,
+            mode: 'blendWithBackground',
+            alphaSrc: src,
+          });
         },
       });
     }
