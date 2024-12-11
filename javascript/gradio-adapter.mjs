@@ -157,6 +157,7 @@ async function sendToSAM(dataURL) {
     spawnNotification({
       icon: 'up',
       title: 'Segment Anything required',
+      key: 'segment-anything-required',
       subtitle: 'Click "Install" to go to the extension install page.',
       actions: [
         {

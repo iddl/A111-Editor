@@ -25,15 +25,23 @@ function spawnNotification(message) {
 }
 
 class NotificationCenter {
-  constructor({ parent }) {
+  constructor({ parent, getDB }) {
     this.parent = parent;
     const svgContainer = document.createElement('div');
     svgContainer.innerHTML = decodeURIComponent(symbols);
     document.body.appendChild(svgContainer.firstChild);
     this.openAlert = null;
+    this.getDB = getDB;
   }
 
-  spawnNotification(message) {
+  async spawnNotification(message) {
+    if (message.showOnce) {
+      const shown = await this.previouslyShown(message.key);
+      if (shown) {
+        return;
+      }
+    }
+
     if (this.openAlert) {
       this.parent.removeChild(this.openAlert.el);
       this.openAlert = null;
@@ -42,20 +50,46 @@ class NotificationCenter {
     this.openAlert = new Notification({
       ...message,
       parent: this.parent,
+      markAsShown: () => this.markAsShown(message.key),
+    });
+  }
+
+  async previouslyShown(name) {
+    const db = await this.getDB();
+    const transaction = db.transaction('notifications', 'readonly');
+    const objectStore = transaction.objectStore('notifications');
+    const getRequest = objectStore.get(name);
+    return new Promise((resolve, reject) => {
+      getRequest.onsuccess = () => {
+        resolve(!!getRequest.result);
+      };
+      getRequest.onerror = () => {
+        reject('Error fetching data');
+      };
+    });
+  }
+
+  async markAsShown(name) {
+    const db = await this.getDB();
+    const transaction = db.transaction('notifications', 'readwrite');
+    const objectStore = transaction.objectStore('notifications');
+    const addRequest = objectStore.add(true, name);
+    return new Promise((resolve, reject) => {
+      addRequest.onsuccess = () => {
+        resolve();
+      };
+      addRequest.onerror = () => {
+        reject('Error adding data');
+      };
     });
   }
 }
 
 class Notification {
-  constructor(args) {
-    this.args = args;
+  constructor({ icon, title, subtitle, actions, parent, markAsShown }) {
     this.el = null;
     this.killTime = 300;
-    this.parent = args.parent;
-    this.init(args);
-  }
-  init(args) {
-    const { icon, title, subtitle, actions, parent } = args;
+    this.parent = parent;
     const block = 'notification';
     const xmlnsSVG = 'http://www.w3.org/2000/svg';
     const xmlnsUse = 'http://www.w3.org/1999/xlink';
@@ -121,6 +155,7 @@ class Notification {
         if (action.handler) {
           action.handler();
         }
+        markAsShown();
         this.close();
       });
 
